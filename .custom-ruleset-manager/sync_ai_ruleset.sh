@@ -9,7 +9,7 @@ set -euo pipefail
 # Never touches: AI_RULES.md, PROJECT_SPECIFIC.md
 # -----------------------------
 
-TEMPLATE_REPO="git@github.com:csh-1997-eng/ai-rules-template.git"  # ⚠️ UPDATE THIS
+TEMPLATE_REPO="git@github.com:csh-1997-eng/ai-base-repo-template.git"  # ⚠️ UPDATE THIS
 TEMP_DIR=$(mktemp -d)
 
 # Cleanup on exit
