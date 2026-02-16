@@ -1,0 +1,15 @@
+# Cursor Rules Entrypoint
+
+**Base Rules:** All tasks start with `rules/BASE_RULES.md`
+
+**Skills:** Load from `rules/skills/` as needed:
+- `security_audit.md`
+- `prototyping.md`
+- `ui_design.md`
+- `database_design.md`
+- `testing.md`
+- `production.md`
+
+**Project Rules:** `AI_RULES.md` for dependency policy, minimal diffs, and output format.
+
+**Skill Selection:** Choose skills based on task. Security review? Load security_audit.md. Building UI? Load ui_design.md. Default to BASE_RULES.md if uncertain.
