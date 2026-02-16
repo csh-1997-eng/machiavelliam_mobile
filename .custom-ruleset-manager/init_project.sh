@@ -3,12 +3,13 @@ set -euo pipefail
 
 # -----------------------------
 # init_project.sh
-# Fills placeholders in AI_RULES.md
-# Deletes itself after successful completion
+# 1. Fills placeholders in AI_RULES.md
+# 2. Creates PROJECT_SPECIFIC.md from template
+# 3. Deletes itself and the template after successful completion
 # Run once after cloning template repo
 # -----------------------------
 
-# Get root directory (script is now in scripts/ folder)
+# Get root directory (script is in .custom-ruleset-manager/ folder)
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
@@ -19,8 +20,9 @@ require_file() {
   fi
 }
 
-# Check required file
+# Check required files
 require_file "AI_RULES.md"
+require_file "rules/PROJECT_SPECIFIC.template.md"
 
 # Helper: read input with a default
 prompt() {
@@ -101,6 +103,16 @@ replace_in_file "AI_RULES.md" "{{BUILD_CMD}}" "$BUILD_CMD"
 echo "✅ AI_RULES.md initialized successfully"
 echo ""
 
+# Create PROJECT_SPECIFIC.md from template
+echo "📝 Creating PROJECT_SPECIFIC.md from template..."
+cp "rules/PROJECT_SPECIFIC.template.md" "rules/PROJECT_SPECIFIC.md"
+echo "✅ PROJECT_SPECIFIC.md created"
+echo ""
+
+# Delete template file (no longer needed)
+echo "🗑️  Deleting PROJECT_SPECIFIC.template.md (no longer needed)..."
+rm -f "rules/PROJECT_SPECIFIC.template.md"
+
 # Delete this script (one-time use only)
 SCRIPT_PATH="${BASH_SOURCE[0]}"
 echo "🗑️  Deleting init_project.sh (one-time use only)..."
@@ -110,10 +122,10 @@ echo ""
 echo "✅ Initialization complete!"
 echo ""
 echo "📋 Next steps:"
-echo "   1. Review AI_RULES.md and adjust if needed"
+echo "   1. Review AI_RULES.md and rules/PROJECT_SPECIFIC.md and adjust if needed"
 echo "   2. Run sync script to pull latest rules:"
-echo "      ./scripts/sync_ai_rules.sh"
-echo "   3. Commit AI_RULES.md:"
-echo "      git add AI_RULES.md"
-echo "      git commit -m 'Initialize AI_RULES.md'"
+echo "      ./.custom-ruleset-manager/sync_ai_ruleset.sh"
+echo "   3. Commit public files:"
+echo "      git add AI_RULES.md rules/PROJECT_SPECIFIC.md .custom-ruleset-manager/"
+echo "      git commit -m 'Initialize AI rules'"
 echo ""

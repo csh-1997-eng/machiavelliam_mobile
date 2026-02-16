@@ -2,13 +2,14 @@
 set -euo pipefail
 
 # -----------------------------
-# sync_ai_rules.sh
+# sync_ai_ruleset.sh
 # Syncs AI rules from private template repo
 # Requires SSH access to private template
 # Safe to run multiple times
+# Never touches: AI_RULES.md, PROJECT_SPECIFIC.md
 # -----------------------------
 
-TEMPLATE_REPO="git@github.com:csh-1997-eng/ai-base-repo-template.git"  # ⚠️ UPDATE THIS
+TEMPLATE_REPO="git@github.com:csh-1997-eng/ai-rules-template.git"  # ⚠️ UPDATE THIS
 TEMP_DIR=$(mktemp -d)
 
 # Cleanup on exit
@@ -37,7 +38,7 @@ echo "✅ Template cloned"
 echo ""
 
 # Create directories if they don't exist
-mkdir -p rules/skills .cursor/rules scripts
+mkdir -p rules/skills .cursor/rules .custom-ruleset-manager
 
 # Sync files from template
 echo "🔄 Syncing files..."
@@ -72,55 +73,21 @@ if [[ -f "$TEMP_DIR/AGENTS.md" ]]; then
 fi
 
 # 5. Sync this script itself (so it can be updated)
-if [[ -f "$TEMP_DIR/scripts/sync_ai_rules.sh" ]]; then
-  cp "$TEMP_DIR/scripts/sync_ai_rules.sh" "./scripts/"
-  chmod +x ./scripts/sync_ai_rules.sh
-  echo "   ✓ scripts/sync_ai_rules.sh"
+if [[ -f "$TEMP_DIR/.custom-ruleset-manager/sync_ai_ruleset.sh" ]]; then
+  cp "$TEMP_DIR/.custom-ruleset-manager/sync_ai_ruleset.sh" "./.custom-ruleset-manager/"
+  chmod +x ./.custom-ruleset-manager/sync_ai_ruleset.sh
+  echo "   ✓ .custom-ruleset-manager/sync_ai_ruleset.sh"
 fi
 
-# 6. Create PROJECT_SPECIFIC.md if it doesn't exist (one-time only, never overwrite)
-if [[ ! -f "./rules/PROJECT_SPECIFIC.md" ]]; then
-  echo ""
-  echo "📝 Creating PROJECT_SPECIFIC.md (one-time only)..."
-  
-  if [[ -f "$TEMP_DIR/rules/PROJECT_SPECIFIC.template.md" ]]; then
-    cp "$TEMP_DIR/rules/PROJECT_SPECIFIC.template.md" "./rules/PROJECT_SPECIFIC.md"
-  else
-    cat > "./rules/PROJECT_SPECIFIC.md" << 'EOF'
-# Project-Specific Rules
-
-This file is local to this project and will never be overwritten by sync.
-
-## Project Context
-- **Name:** [Fill in]
-- **Purpose:** [Fill in]
-- **Special Requirements:** [Fill in]
-
-## Project-Specific Overrides
-
-Add any rules specific to this project that override or extend BASE_RULES.md.
-
-### Example:
-- This project uses a legacy API that requires XML instead of JSON
-- All functions must include retry logic (infrastructure is flaky)
-- Use verbose logging (client wants detailed logs)
-
-EOF
-  fi
-  echo "   ✓ rules/PROJECT_SPECIFIC.md (created)"
+# 6. Sync README (always overwrite)
+if [[ -f "$TEMP_DIR/.custom-ruleset-manager/README.md" ]]; then
+  cp "$TEMP_DIR/.custom-ruleset-manager/README.md" "./.custom-ruleset-manager/"
+  echo "   ✓ .custom-ruleset-manager/README.md"
 fi
 
-# 7. Create AI_RULES.md if it doesn't exist (one-time only, never overwrite)
-if [[ ! -f "./AI_RULES.md" ]]; then
-  echo ""
-  echo "📝 Creating AI_RULES.md template..."
-  echo "   ⚠️  You need to run ./scripts/init_project.sh to fill placeholders"
-  
-  if [[ -f "$TEMP_DIR/AI_RULES.md" ]]; then
-    cp "$TEMP_DIR/AI_RULES.md" "./"
-    echo "   ✓ AI_RULES.md (created with placeholders)"
-  fi
-fi
+# NOTE: init_project.sh is NOT synced - it only exists in template and deletes itself after first run
+# NOTE: PROJECT_SPECIFIC.md is NOT created here - init_project.sh creates it
+# NOTE: AI_RULES.md is NOT touched - it's already filled in by init_project.sh
 
 echo ""
 echo "✅ Sync complete!"
@@ -134,7 +101,8 @@ echo "   • rules/skills/"
 echo "   • .cursor/rules/"
 echo "   • CLAUDE.md"
 echo "   • AGENTS.md"
-echo "   • scripts/sync_ai_rules.sh"
+echo "   • .custom-ruleset-manager/sync_ai_ruleset.sh"
+echo "   • .custom-ruleset-manager/README.md"
 echo ""
 echo "🔒 Protected (never overwritten):"
 echo "   • rules/PROJECT_SPECIFIC.md"

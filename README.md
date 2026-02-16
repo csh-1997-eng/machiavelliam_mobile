@@ -1,252 +1,320 @@
-# File Structure Explanation
+# AI Rules Template
 
-Your template repo should contain:
+Personal AI coding assistant framework for maintaining consistency and quality across projects.
+
+---
+
+## What This Is
+
+A private template repo that syncs AI configuration files (coding style, workflow patterns, specialized skills) to every project. AI tools (Cursor, Claude Code, Copilot) read these rules and generate code that matches my style.
+
+**Goal:** AI-generated code should be indistinguishable from code I'd write myself.
+
+---
+
+## Template Structure
 
 ```
-/
-├── AI_RULES.md                        # Project-specific rules + shell script params
-├── CLAUDE.md                          # Claude Code entrypoint
-├── AGENTS.md                          # Codex entrypoint
-├── .cursor/
-│   └── rules/
-│       └── 00-cursor-entrypoint.mdc  # Cursor entrypoint
+ai-rules-template/ (PRIVATE)
+├── .custom-ruleset-manager/
+│   ├── README.md                      # System documentation (public)
+│   ├── init_project.sh               # One-time initialization (public)
+│   └── sync_ai_ruleset.sh            # Sync latest rules (public)
 ├── rules/
-│   ├── BASE_RULES.md                 # Always-loaded core rules
+│   ├── BASE_RULES.md                 # Core rules, voice, workflow (PRIVATE)
+│   ├── PROJECT_SPECIFIC.template.md  # Template for overrides (becomes PROJECT_SPECIFIC.md)
 │   └── skills/
-│       ├── security_audit.md         # Security review workflows
-│       ├── prototyping.md            # Fast iteration mode
-│       ├── ui_design.md              # Interface & design guidelines
-│       ├── database_design.md        # Schema & query patterns
-│       ├── testing.md                # Test strategy
-│       └── production.md             # Monitoring & deployment
+│       ├── security_audit.md         # (PRIVATE)
+│       ├── prototyping.md            # (PRIVATE)
+│       ├── ui_design.md              # (PRIVATE)
+│       ├── database_design.md        # (PRIVATE)
+│       ├── testing.md                # (PRIVATE)
+│       └── production.md             # (PRIVATE)
+├── .cursor/rules/
+│   └── 00-cursor-entrypoint.mdc      # Cursor config (PRIVATE)
+├── AI_RULES.md                       # Project config template (public)
+├── CLAUDE.md                         # Claude Code entrypoint (PRIVATE)
+├── AGENTS.md                         # Codex entrypoint (PRIVATE)
+├── LICENSE                           # MIT License (public)
+└── .gitignore
 ```
 
 ---
 
-## What Each File Does
+## How It Works
 
-### AI_RULES.md
-Project-specific configuration and commands. Contains:
-- Dependency policy (hard rule: don't modify without permission)
-- Minimal diff policy (no unnecessary refactoring)
-- Output format requirements (summary, files changed, commands to run)
-- Repo-specific commands (format, lint, typecheck, test, build)
+**AI tools read files in this order:**
+1. `AI_RULES.md` → Project commands and pointers
+2. `rules/BASE_RULES.md` → Core coding philosophy (synced from template, gitignored)
+3. `rules/PROJECT_SPECIFIC.md` → Project-specific overrides (committed, public)
+4. `rules/skills/` → Specialized workflows loaded as needed (synced from template, gitignored)
 
-This file uses shell script placeholders (`{{PROJECT_NAME}}`, `{{STACK}}`, etc.) that get filled in by `init_project.sh`.
-
----
-
-### CLAUDE.md
-Claude Code entrypoint. Tells Claude Code to:
-- Read `rules/BASE_RULES.md` for all tasks
-- Load relevant skills from `rules/skills/` based on task context
-- Follow project-specific rules in `AI_RULES.md`
+**Public vs Private:**
+- **Public (committed to project repos):** `AI_RULES.md`, `PROJECT_SPECIFIC.md`, `.custom-ruleset-manager/`
+- **Private (gitignored, synced from template):** `BASE_RULES.md`, `skills/`, `CLAUDE.md`, `AGENTS.md`, `.cursor/rules/`
 
 ---
 
-### AGENTS.md
-Codex entrypoint. Tells Codex to:
-- Read `rules/BASE_RULES.md` first
-- Load skills from `rules/skills/` as needed
-- Follow project config in `AI_RULES.md`
+## Setup New Project
 
----
-
-### .cursor/rules/00-cursor-entrypoint.mdc
-Cursor-specific entrypoint. Points Cursor to:
-- `rules/BASE_RULES.md` for core rules
-- `rules/skills/` for specialized workflows
-- `AI_RULES.md` for project config
-
-Cursor automatically injects `.mdc` files into its agent context.
-
----
-
-### rules/BASE_RULES.md
-**Always-loaded core rules.** Contains:
-- Your identity, voice, and working style
-- Aesthetic samples (for AI to match your writing)
-- Core code style (typing, dependency injection, error handling)
-- Security fundamentals (non-negotiable)
-- Workflow (experiment → demo → deploy)
-- How AI should handle uncertainty
-
-This is the foundation. Every AI tool reads this first.
-
----
-
-### rules/skills/
-**Specialized workflows loaded on-demand:**
-
-- **security_audit.md** - Deep security review, vulnerability scanning, pre-deployment checklist
-- **prototyping.md** - Fast iteration mode (skip tests, optimize for speed)
-- **ui_design.md** - Interface design, Apple aesthetic, responsive web design
-- **database_design.md** - Schema design, migrations, query optimization (Supabase/Postgres)
-- **testing.md** - Test strategy, TDD, integration tests, fixture usage
-- **production.md** - Monitoring, alerts, cost protection, deployment checklist
-
-AI tools only load skills relevant to the current task to save tokens and avoid confusion.
-
----
-
-## How Skills Work
-
-**Example 1:** You ask for a security review
-- AI reads `BASE_RULES.md` (core principles)
-- AI reads `security_audit.md` (deep security checklist)
-- Result: Paranoid security review with vulnerability scanning
-
-**Example 2:** You ask to build a quick demo
-- AI reads `BASE_RULES.md` (core principles)
-- AI reads `prototyping.md` (fast iteration mode)
-- Result: Working demo in <1 hour, skips tests/optimization
-
-**Example 3:** You ask to design a user dashboard
-- AI reads `BASE_RULES.md` (core principles)
-- AI reads `ui_design.md` (Apple aesthetic, responsive design)
-- Result: Clean, minimalist interface that works on all devices
-
----
-
-# Get Started Building (2-minute setup)
-
-Open `AI_RULES.md` and replace the following placeholders:
-
-- `{{PROJECT_NAME}}` - Your project name
-- `{{STACK}}` - Your tech stack (e.g., "Next.js + Supabase", "FastAPI + Postgres")
-- `{{FORMAT_CMD}}` - Command to format code (or leave empty if not using)
-- `{{LINT_CMD}}` - Command to lint code (or leave empty if not using)
-- `{{TYPECHECK_CMD}}` - Command to typecheck (or leave empty if not using)
-- `{{TEST_CMD}}` - Command to run tests
-- `{{BUILD_CMD}}` - Command to build project (or leave empty if not applicable)
-
-**Note:** The extra command placeholders (FORMAT, LINT, TYPECHECK) are optional scaffolding for projects with specific tooling. If your project doesn't use formatters/linters/typecheckers, leave them empty or remove them. They exist for future flexibility as your project matures.
-
----
-
-## Example: Python Repo
-
-```markdown
-{{PROJECT_NAME}} → ML Pipeline API
-{{STACK}} → FastAPI + Postgres + OpenAI
-{{FORMAT_CMD}} → ruff format .
-{{LINT_CMD}} → ruff check .
-{{TYPECHECK_CMD}} → mypy src/
-{{TEST_CMD}} → pytest -q
-{{BUILD_CMD}} → (leave empty - no build step)
-```
-
----
-
-## Example: Next.js Repo
-
-```markdown
-{{PROJECT_NAME}} → SaaS Dashboard
-{{STACK}} → Next.js + Supabase + Vercel
-{{FORMAT_CMD}} → pnpm format
-{{LINT_CMD}} → pnpm lint
-{{TYPECHECK_CMD}} → pnpm typecheck
-{{TEST_CMD}} → pnpm test
-{{BUILD_CMD}} → pnpm build
-```
-
----
-
-# Quick Tutorial: Setting Up AI Rules + Init Script (Mac + Cursor)
-
-This setup is designed specifically for **Mac users using Cursor as the primary IDE**.
-
-- The `init_project.sh` script is **macOS-focused** (also works on Linux)
-- The `.cursor/rules/*` files are **Cursor-specific** - other IDEs won't auto-load them
-- This makes **Claude Code + Codex + Cursor** behave consistently across every repo
-
----
-
-## 1) Run the `init_project.sh` Script (Mac)
-
-### Step A — Make it executable
-
-From the repo root, run:
+### 1. Create from Template
 
 ```bash
-chmod +x scripts/init_project.sh
+gh repo create my-project --template csh-1997-eng/ai-rules-template --private --clone
+cd my-project
 ```
 
 ---
 
-### Step B — Run it
+### 2. Add `.gitignore`
 
-```bash
-./scripts/init_project.sh
+```gitignore
+# AI Rules - PRIVATE (gitignored, synced from template)
+/rules/BASE_RULES.md
+/rules/skills/
+/.cursor/rules/
+/CLAUDE.md
+/AGENTS.md
+
+# AI Rules - PUBLIC (committed)
+# /rules/PROJECT_SPECIFIC.md
+# /AI_RULES.md
+# /.custom-ruleset-manager/
+
+# Project-specific (adjust per stack)
+node_modules/
+.env
+*.pyc
+__pycache__/
+.venv/
+.DS_Store
+dist/
+build/
+.next/
 ```
 
-It will ask you a few questions:
+```bash
+git add .gitignore
+git commit -m "Add gitignore"
+```
+
+---
+
+### 3. Initialize Project
+
+```bash
+./.custom-ruleset-manager/init_project.sh
+```
+
+**Prompts for:**
 - Project name
 - Stack
-- Test / lint / format commands
+- Commands (test, lint, build, etc.)
 
-Then it automatically fills in placeholders inside your rules files (like `{{TEST_CMD}}`).
+**Creates:**
+- `AI_RULES.md` (filled in)
+- `rules/PROJECT_SPECIFIC.md` (empty template)
 
----
-
-## 2) Why Cursor Rule Files Start With Numbers
-
-Cursor loads rule files in **alphabetical order**.
-
-Naming them:
-- `00-cursor-entrypoint.mdc`
-
-ensures they load predictably. If you add more Cursor-specific rules later, you can use:
-- `10-project-specific.mdc`
-- `20-team-conventions.mdc`
-
-This keeps things organized and controls rule priority.
+**Deletes itself after success.**
 
 ---
 
-## 3) Platform Notes
+### 4. Sync Rules from Template
 
-**This setup works across platforms:**
-- Web apps (Next.js, React, Vue, etc.)
-- APIs (FastAPI, Flask, Node.js, etc.)
-- Data pipelines (Python, notebooks, ETL)
-- ML projects (training, inference, experimentation)
-- Desktop apps (Electron, Tauri, etc.)
+```bash
+./.custom-ruleset-manager/sync_ai_ruleset.sh
+```
 
-**For mobile apps specifically:**
-If you're building iOS/Android apps, you may want to add `rules/skills/mobile_development.md` for platform-specific patterns (React Native, Flutter, native iOS/Android). The current setup is platform-agnostic and works for any type of project.
+**Syncs from private template:**
+- `rules/BASE_RULES.md`
+- `rules/skills/`
+- `.cursor/rules/`
+- `CLAUDE.md`
+- `AGENTS.md`
+- `.custom-ruleset-manager/` files
+
+**Never touches:**
+- `AI_RULES.md`
+- `rules/PROJECT_SPECIFIC.md`
 
 ---
 
-## 4) How to Use Skills
+### 5. Commit Public Files
 
-**Invoke skills explicitly when needed:**
-
+```bash
+git add AI_RULES.md rules/PROJECT_SPECIFIC.md .custom-ruleset-manager/
+git commit -m "Initialize AI rules"
+git push
 ```
-[Use prototyping skill] Build me a quick demo of a chatbot
-```
-
-```
-[Apply security_audit skill] Review this authentication code
-```
-
-```
-[Use ui_design skill] Create a dashboard for user analytics
-```
-
-Or let the AI infer from context:
-- "Review this code for vulnerabilities" → AI loads `security_audit.md`
-- "Build a quick proof of concept" → AI loads `prototyping.md`
-- "Design the login page" → AI loads `ui_design.md`
 
 ---
 
-## 5) Modifying Rules
+## Usage Examples
 
-**To update core principles:** Edit `rules/BASE_RULES.md`
+### Example 1: Next.js Web App (Vercel)
 
-**To add/modify skills:** Edit files in `rules/skills/`
+**Project:** SaaS dashboard with Supabase backend
 
-**To change project config:** Edit `AI_RULES.md`
+**Setup:**
+```bash
+gh repo create saas-dashboard --template ai-rules-template --private --clone
+cd saas-dashboard
+# Add .gitignore (include node_modules/, .env, .next/)
+git add .gitignore && git commit -m "Add gitignore"
 
-All AI tools (Claude Code, Codex, Cursor) will pick up changes automatically on next run.
+./.custom-ruleset-manager/init_project.sh
+# Project name: SaaS Dashboard
+# Stack: Next.js + Supabase + Vercel
+# Test: pnpm test
+# Build: pnpm build
+# Lint: pnpm lint
+
+./.custom-ruleset-manager/sync_ai_ruleset.sh
+
+git add AI_RULES.md rules/PROJECT_SPECIFIC.md .custom-ruleset-manager/
+git commit -m "Initialize AI rules"
+git push
+```
+
+**Workflow:**
+- AI follows BASE_RULES.md (Apple aesthetic UI, strong typing, dependency injection)
+- Use `ui_design.md` skill for styling components
+- Use `database_design.md` skill for Supabase schema
+- Before deploy: AI loads `security_audit.md` and `production.md` skills
+
+**PROJECT_SPECIFIC.md override example:**
+```markdown
+## UI/UX (BASE_RULES Section I):
+- Client wants brand colors (blue #0066CC) - override minimalist gray
+```
+
+---
+
+### Example 2: ML Pipeline (Experiments)
+
+**Project:** Price prediction model with feature engineering
+
+**Setup:**
+```bash
+gh repo create price-prediction --template ai-rules-template --private --clone
+cd price-prediction
+# Add .gitignore (include .venv/, *.pyc, __pycache__/, data/)
+git add .gitignore && git commit -m "Add gitignore"
+
+./.custom-ruleset-manager/init_project.sh
+# Project name: Price Prediction
+# Stack: Python + Pandas + scikit-learn
+# Test: pytest -q
+# Lint: ruff check .
+# Format: ruff format .
+
+./.custom-ruleset-manager/sync_ai_ruleset.sh
+
+git add AI_RULES.md rules/PROJECT_SPECIFIC.md .custom-ruleset-manager/
+git commit -m "Initialize AI rules"
+git push
+```
+
+**Workflow:**
+- AI follows BASE_RULES.md (concise code, strong typing with Pydantic)
+- Use `prototyping.md` skill during experimentation (skip tests, move fast)
+- No `production.md` needed yet (just experiments)
+
+**PROJECT_SPECIFIC.md override example:**
+```markdown
+## Workflow (BASE_RULES Section J):
+- This is research - prioritize speed over production readiness
+- Log all model metrics (accuracy, F1, confusion matrix)
+
+## Skills:
+- Always use prototyping.md - exploratory work only
+```
+
+---
+
+### Example 3: Mobile App Prototype
+
+**Project:** React Native fitness tracker
+
+**Setup:**
+```bash
+gh repo create fitness-tracker --template ai-rules-template --private --clone
+cd fitness-tracker
+# Add .gitignore (include node_modules/, .expo/, ios/Pods/)
+git add .gitignore && git commit -m "Add gitignore"
+
+./.custom-ruleset-manager/init_project.sh
+# Project name: Fitness Tracker
+# Stack: React Native + Expo
+# Test: (leave empty - prototype)
+# Build: expo build:ios
+# Lint: (leave empty)
+
+./.custom-ruleset-manager/sync_ai_ruleset.sh
+
+git add AI_RULES.md rules/PROJECT_SPECIFIC.md .custom-ruleset-manager/
+git commit -m "Initialize AI rules"
+git push
+```
+
+**Workflow:**
+- AI follows BASE_RULES.md (clean component structure, minimal abstraction)
+- Use `prototyping.md` skill (skip tests, move fast)
+- Use `ui_design.md` skill (minimalist design, touch targets 44x44px)
+
+**PROJECT_SPECIFIC.md override example:**
+```markdown
+## Code Style (BASE_RULES Section C):
+- Use Expo's conventions for file structure (app/, components/, hooks/)
+
+## Skills:
+- Always use prototyping.md - this is a quick POC
+- Use ui_design.md for all screens (mobile-first, touch targets)
+```
+
+---
+
+## Update Rules Across Projects
+
+**Edit template:**
+```bash
+cd ai-rules-template
+nano rules/BASE_RULES.md
+git commit -m "Update error handling guidelines"
+git push
+```
+
+**Sync to projects:**
+```bash
+cd ~/projects/saas-dashboard
+./.custom-ruleset-manager/sync_ai_ruleset.sh  # Gets latest BASE_RULES.md
+
+cd ~/projects/price-prediction
+./.custom-ruleset-manager/sync_ai_ruleset.sh  # Gets latest BASE_RULES.md
+```
+
+---
+
+## File Breakdown
+
+**AI_RULES.md** - Project config (name, stack, commands). Points to BASE_RULES and PROJECT_SPECIFIC.
+
+**BASE_RULES.md** - Core coding philosophy, voice samples, workflow patterns. Your IP.
+
+**PROJECT_SPECIFIC.md** - Overrides BASE_RULES for this specific project. Public.
+
+**skills/** - Specialized workflows:
+- `security_audit.md` - Pre-deployment security checklist
+- `prototyping.md` - Fast iteration mode (skip tests)
+- `ui_design.md` - Apple aesthetic, responsive design
+- `database_design.md` - Supabase/Postgres patterns
+- `testing.md` - TDD, fixtures for expensive APIs
+- `production.md` - Monitoring, cost protection
+
+**CLAUDE.md / AGENTS.md / .cursor/rules/** - Entrypoints for AI tools.
+
+---
+
+## License
+
+MIT License - see LICENSE file.
