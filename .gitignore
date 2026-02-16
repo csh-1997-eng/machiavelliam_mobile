@@ -1,0 +1,12 @@
+# This is just a starter .gitignore for the template
+# Projects will customize this for their stack (Python, Node.js, etc.)
+
+# macOS
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
+
+# Logs
+*.log
