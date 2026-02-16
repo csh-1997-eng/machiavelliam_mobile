@@ -103,6 +103,7 @@ git commit -m "Add gitignore"
 ### 3. Initialize Project
 
 ```bash
+chmod +x .custom-ruleset-manager/*.sh
 ./.custom-ruleset-manager/init_project.sh
 ```
 
@@ -122,6 +123,7 @@ git commit -m "Add gitignore"
 ### 4. Sync Rules from Template
 
 ```bash
+chmod +x .custom-ruleset-manager/*.sh
 ./.custom-ruleset-manager/sync_ai_ruleset.sh
 ```
 
