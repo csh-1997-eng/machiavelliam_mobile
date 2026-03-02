@@ -22,6 +22,8 @@ Overrides BASE_RULES.md when in conflict.
 **H) Optimization:**
 
 **I) UI/UX:**
+Default: Inherit ENOCH doctrine from BASE_RULES (authored systems, typographic authority, logic-first hierarchy, purposeful motion).
+Override only if this project has brand constraints that require a different visual language.
 
 **J) Workflow:**
 
