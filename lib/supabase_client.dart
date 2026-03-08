@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class SupabaseManager {
   static bool _initialized = false;
 
+  static bool get isInitialized => _initialized;
   static SupabaseClient get client => Supabase.instance.client;
 
   static Future<void> ensureInitialized() async {
@@ -19,7 +20,7 @@ class SupabaseManager {
     await Supabase.initialize(
       url: supabaseUrl,
       anonKey: supabaseAnonKey,
-      authOptions: const FlutterAuthClientOptions(autoRefreshToken: false, persistSession: false),
+      authOptions: const FlutterAuthClientOptions(autoRefreshToken: false),
     );
 
     _initialized = true;
