@@ -1,4 +1,4 @@
-# AI RULES — Project: {{PROJECT_NAME}}
+# AI RULES — Project: machiavelliam_mobile
 Stack: {{STACK}}
 
 This file contains project-specific configurations and commands.
@@ -13,7 +13,7 @@ This file contains project-specific configurations and commands.
 
 ## Project Configuration
 
-**Project Name:** {{PROJECT_NAME}}
+**Project Name:** machiavelliam_mobile
 **Stack:** {{STACK}}
 
 ---
@@ -21,19 +21,21 @@ This file contains project-specific configurations and commands.
 ## Repo-Specific Commands
 
 ### Format
-{{FORMAT_CMD}}
+dart format .
 
 ### Lint
-{{LINT_CMD}}
+flutter analyze
 
 ### Typecheck
-{{TYPECHECK_CMD}}
+flutter analyze
 
 ### Tests
-{{TEST_CMD}}
+flutter test
 
 ### Build
-{{BUILD_CMD}}
+iOS: flutter build ios --release
+Android: flutter build apk --release
+Web: flutter build web --release
 
 ---
 
