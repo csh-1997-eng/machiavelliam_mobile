@@ -51,4 +51,8 @@ rules/skills/
 /.cursor/rules/
 /CLAUDE.md
 /AGENTS.md
+tmp/.agents/
+.claude/
+skills-lock.json
+
 tmp/

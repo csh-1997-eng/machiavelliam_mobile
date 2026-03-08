@@ -1,13 +1,20 @@
+/*
+ * Copyright (c) 2026 Cole Hoffman
+ * Licensed under MIT License - see LICENSE file for details
+ *
+ * Service: insights_service.dart
+ * Purpose: Fetches AI coaching advice from Vercel /api/insights → OpenAI.
+ */
+
 import 'dart:convert';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../supabase_client.dart';
+import 'package:http/http.dart' as http;
 import '../models/card.dart';
 import '../models/poker_hand.dart';
 import '../models/game_settings.dart';
+import '../models/player_action.dart';
+import 'api_client.dart';
 
 class InsightsService {
-  static const String _edgeFunctionName = 'poker-insights';
-
   static Future<String?> getInsights({
     required List<PokerCard> userHoleCards,
     required List<PokerCard> communityCards,
@@ -15,41 +22,32 @@ class InsightsService {
     required double handStrengthPercent,
     required GameSettings settings,
     required String phase,
+    PlayerAction? playerAction,
   }) async {
-    await SupabaseManager.ensureInitialized();
-
-    final SupabaseClient client = SupabaseManager.client;
-    if (client.rest.url.isEmpty) {
+    try {
+      final res = await http.post(
+        Uri.parse('$apiBaseUrl/api/insights'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'phase': phase,
+          'settings': {
+            'players': settings.numberOfPlayers,
+            'position': GameSettings.getPositionName(settings.userPosition),
+            'smallBlind': settings.smallBlind,
+            'bigBlind': settings.bigBlind,
+          },
+          'userHoleCards': userHoleCards.map((c) => c.toString()).toList(),
+          'communityCards': communityCards.map((c) => c.toString()).toList(),
+          'evaluation': currentEvaluation?.handName,
+          'handStrengthPercent': handStrengthPercent,
+          if (playerAction != null) 'playerAction': playerAction.toJson(),
+        }),
+      );
+      if (res.statusCode != 200) return null;
+      final data = jsonDecode(res.body) as Map;
+      return data['insights'] as String?;
+    } catch (e) {
       return null;
     }
-
-    final payload = {
-      'phase': phase,
-      'settings': {
-        'players': settings.numberOfPlayers,
-        'position': GameSettings.getPositionName(settings.userPosition),
-        'smallBlind': settings.smallBlind,
-        'bigBlind': settings.bigBlind,
-        'decks': settings.numberOfDecks,
-      },
-      'userHoleCards': userHoleCards.map((c) => c.toString()).toList(),
-      'communityCards': communityCards.map((c) => c.toString()).toList(),
-      'evaluation': currentEvaluation?.handName,
-      'handStrengthPercent': handStrengthPercent,
-    };
-
-    final response = await client.functions.invoke(
-      _edgeFunctionName,
-      body: jsonEncode(payload),
-    );
-
-    if (response.data == null) return null;
-    if (response.data is String) return response.data as String;
-    if (response.data is Map && (response.data as Map).containsKey('insights')) {
-      return (response.data as Map)['insights'] as String?;
-    }
-    return response.data.toString();
   }
 }
-
-
