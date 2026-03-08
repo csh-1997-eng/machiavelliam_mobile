@@ -3,77 +3,77 @@
  * Licensed under MIT License - see LICENSE file for details
  *
  * Service: session_service.dart
- * Purpose: Writes session, hand, and player action records to Supabase.
- *          Fails silently if Supabase is not configured.
+ * Purpose: Persists sessions, hands, and player actions via Vercel API routes → Neon.
+ *          All calls fail silently — never block the game.
  */
 
-import '../supabase_client.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../models/card.dart';
 import '../models/game_settings.dart';
 import '../models/player_action.dart';
 import '../controllers/poker_game_controller.dart';
+import 'api_client.dart';
 
 class SessionService {
-  /// Creates a new session record. Returns the session ID, or null if Supabase is unavailable.
   static Future<String?> createSession(GameSettings settings) async {
     try {
-      await SupabaseManager.ensureInitialized();
-      if (!SupabaseManager.isInitialized) return null;
-
-      final result = await SupabaseManager.client.from('sessions').insert({
-        'players': settings.numberOfPlayers,
-        'position': GameSettings.getPositionName(settings.userPosition),
-        'small_blind': settings.smallBlind,
-        'big_blind': settings.bigBlind,
-      }).select('id').single();
-
-      return result['id'] as String?;
+      final res = await http.post(
+        Uri.parse('$apiBaseUrl/api/sessions'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'players': settings.numberOfPlayers,
+          'position': GameSettings.getPositionName(settings.userPosition),
+          'smallBlind': settings.smallBlind,
+          'bigBlind': settings.bigBlind,
+        }),
+      );
+      if (res.statusCode != 201) return null;
+      return (jsonDecode(res.body) as Map)['id'] as String?;
     } catch (e) {
       return null;
     }
   }
 
-  /// Creates a hand record under a session. Returns the hand ID, or null.
   static Future<String?> createHand({
     required String sessionId,
     required List<PokerCard> holeCards,
   }) async {
     try {
-      if (!SupabaseManager.isInitialized) return null;
-
-      final result = await SupabaseManager.client.from('hands').insert({
-        'session_id': sessionId,
-        'hole_cards': holeCards.map((c) => c.toString()).toList(),
-        'community_cards': <String>[],
-      }).select('id').single();
-
-      return result['id'] as String?;
+      final res = await http.post(
+        Uri.parse('$apiBaseUrl/api/hands'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'sessionId': sessionId,
+          'holeCards': holeCards.map((c) => c.toString()).toList(),
+        }),
+      );
+      if (res.statusCode != 201) return null;
+      return (jsonDecode(res.body) as Map)['id'] as String?;
     } catch (e) {
       return null;
     }
   }
 
-  /// Records the player's action at a given phase.
   static Future<void> recordAction({
     required String handId,
     required GamePhase phase,
     required PlayerAction action,
   }) async {
     try {
-      if (!SupabaseManager.isInitialized) return;
-
-      await SupabaseManager.client.from('player_actions').insert({
-        'hand_id': handId,
-        'phase': phase.name,
-        'action': action.actionName,
-        if (action.amount != null) 'amount': action.amount,
-      });
-    } catch (e) {
-      return;
-    }
+      await http.post(
+        Uri.parse('$apiBaseUrl/api/actions'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'handId': handId,
+          'phase': phase.name,
+          'action': action.actionName,
+          if (action.amount != null) 'amount': action.amount,
+        }),
+      );
+    } catch (_) {}
   }
 
-  /// Updates the hand record with final outcome data at showdown.
   static Future<void> completeHand({
     required String handId,
     required List<PokerCard> communityCards,
@@ -82,16 +82,17 @@ class SessionService {
     required String phaseReached,
   }) async {
     try {
-      if (!SupabaseManager.isInitialized) return;
-
-      await SupabaseManager.client.from('hands').update({
-        'community_cards': communityCards.map((c) => c.toString()).toList(),
-        'final_hand': finalHand,
-        'hand_strength': handStrength,
-        'phase_reached': phaseReached,
-      }).eq('id', handId);
-    } catch (e) {
-      return;
-    }
+      await http.patch(
+        Uri.parse('$apiBaseUrl/api/hands'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'handId': handId,
+          'communityCards': communityCards.map((c) => c.toString()).toList(),
+          'finalHand': finalHand,
+          'handStrength': handStrength,
+          'phaseReached': phaseReached,
+        }),
+      );
+    } catch (_) {}
   }
 }
