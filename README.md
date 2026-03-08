@@ -1,121 +1,83 @@
-# 🃏 Macheiavelliam Mobile App
+# Machiavelliam Mobile
 
-A Flutter application designed to help you learn poker strategies, develop better gameplay, and analyze your decision-making through realistic hand simulations.
+An AI poker coach for Texas Hold'em. Practice hands, record your decisions, and receive Machiavellian-level coaching — ranges, position pressure, exploitative play, and meta-game critique.
 
-## 🎯 Features
+## Architecture
 
-### Core Functionality
-- **Realistic Hand Simulation**: Practice single poker hands with proper Texas Hold'em rules
-- **Position-Based Strategy**: Learn how table position affects your play
-- **Hand Strength Analysis**: Get real-time evaluation of your hand strength
-- **Customizable Game Settings**: Configure players, blinds, buy-ins, and more
+```
+Flutter app (iOS/Android/Web)
+  └── HTTP → Vercel API routes (TypeScript, Node 20)
+                ├── /api/sessions   — create game sessions
+                ├── /api/hands      — create/update hands
+                ├── /api/actions    — record player decisions
+                └── /api/insights   — AI coaching via OpenAI
+                        └── Neon Postgres (serverless)
+```
 
-### Game Configuration
-- **Player Count**: 2-10 players
-- **Table Positions**: Small Blind, Big Blind, Early, Middle, Late, Button
-- **Blind Structure**: Customizable small and big blind amounts
-- **Buy-in Amounts**: Flexible buy-in settings
-- **Multiple Decks**: Support for 1-8 decks
+## Prerequisites
 
-### Learning Tools
-- **Hand Evaluation**: Complete poker hand ranking system
-- **Strategy Advice**: Position-based recommendations
-- **Visual Card Representation**: Color-coded cards with proper symbols
-- **Progressive Betting Rounds**: Pre-flop → Flop → Turn → River → Showdown
+- Flutter SDK 3.9.2+
+- Node.js 20+ (for Vercel functions locally)
+- A deployed Vercel project with `DATABASE_URL` and `OPENAI_API_KEY` set
 
-## 🚀 Getting Started
+## Local Development
 
-### Prerequisites
-- Flutter SDK (3.9.2 or higher)
-- Dart SDK
-- iOS Simulator or Android Emulator (for mobile testing)
-- Web browser (for web testing)
+```bash
+# Install Flutter deps
+flutter pub get
 
-### Installation
+# Run against deployed Vercel backend
+flutter run --dart-define=API_BASE_URL=https://your-project.vercel.app
 
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo-url>
-   cd macheiavelliam_mobile
-   ```
+# Run on specific device
+flutter run -d "iPhone 16 Pro" --dart-define=API_BASE_URL=https://your-project.vercel.app
+```
 
-2. **Install dependencies**
-   ```bash
-   flutter pub get
-   ```
-
-3. **Run the application**
-   ```bash
-   # For web (recommended for testing)
-   flutter run -d chrome
-   
-   # For iOS simulator
-   flutter run -d "iPhone 16 Pro"
-   
-   # For Android emulator
-   flutter run -d android
-   ```
-
-## 📱 How to Use
-
-### 1. Main Screen
-- View current game settings
-- Navigate to settings or start a game
-
-### 2. Game Settings
-- **Number of Players**: Adjust from 2-10 players
-- **Your Position**: Select your table position
-- **Buy-in**: Set your starting stack amount
-- **Blinds**: Configure small and big blind amounts
-- **Decks**: Choose number of decks (1-8)
-
-### 3. Game Simulation
-- **Deal Hand**: Get your hole cards
-- **Progressive Betting**: Deal flop, turn, river in sequence
-- **Hand Analysis**: View real-time hand strength and advice
-- **Position Tips**: Get strategic recommendations
-
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 lib/
-├── models/
-│   ├── card.dart           # Playing card representation
-│   ├── deck.dart           # Deck management and shuffling
-│   ├── game_settings.dart  # Game configuration
-│   └── poker_hand.dart     # Hand evaluation and ranking
+├── main.dart
 ├── controllers/
-│   └── poker_game_controller.dart  # Game logic and state
+│   └── poker_game_controller.dart   # game state machine, session/hand tracking
+├── models/
+│   ├── card.dart
+│   ├── deck.dart
+│   ├── game_settings.dart
+│   ├── player_action.dart           # ActionType enum + PlayerAction
+│   └── poker_hand.dart
 ├── screens/
-│   ├── settings_screen.dart  # Game configuration UI
-│   └── game_screen.dart      # Main game interface
-└── main.dart               # App entry point
+│   ├── game_screen.dart             # gameplay UI + action panel
+│   ├── settings_screen.dart
+│   └── home_screen.dart
+└── services/
+    ├── api_client.dart              # API base URL constant
+    ├── insights_service.dart        # /api/insights call
+    └── session_service.dart         # /api/sessions, /api/hands, /api/actions
+
+api/
+├── sessions.ts
+├── hands.ts
+├── actions.ts
+└── insights.ts
+
+db/
+└── migrations/
+    └── 001_initial_schema.sql
 ```
 
-## 🧠 Poker Learning Features
+## Environment Variables
 
-### Hand Rankings
-- High Card
-- Pair
-- Two Pair
-- Three of a Kind
-- Straight
-- Flush
-- Full House
-- Four of a Kind
-- Straight Flush
-- Royal Flush
+Copy `.env.example` to `.env.local` and fill in values (for `vercel dev` only):
 
-### Position Strategy
-- **Early Position**: Play tighter, fewer hands
-- **Middle Position**: Moderate hand selection
-- **Late Position**: Can play more hands, steal blinds
-- **Button**: Best position, last to act
-- **Blinds**: Defend based on pot odds
+```
+DATABASE_URL=postgresql://...
+OPENAI_API_KEY=sk-...
+```
 
-## 🛠️ Development
+In production, set these in the Vercel dashboard.
 
-### Building for Production
+## Build
 
 ```bash
 # iOS
@@ -124,71 +86,14 @@ flutter build ios --release
 # Android
 flutter build apk --release
 
-# Web
-flutter build web --release
+# Web (deployed automatically by Vercel)
+flutter build web --release --dart-define=API_BASE_URL=https://your-project.vercel.app
 ```
 
-### Testing
+## Database
 
-```bash
-# Run unit tests
-flutter test
+Run `db/migrations/001_initial_schema.sql` in your Neon project's SQL editor to initialize the schema.
 
-# Run integration tests
-flutter drive --target=test_driver/app.dart
-```
+## License
 
-## 📚 Learning Resources
-
-This app helps you learn:
-- **Poker Fundamentals**: Hand rankings, betting rounds, positions
-- **Strategic Thinking**: When to fold, call, or raise
-- **Position Play**: How table position affects decisions
-- **Hand Evaluation**: Assessing hand strength in different situations
-
-## 🎮 Game Flow
-
-1. **Configure Settings**: Set up your preferred game parameters
-2. **Deal Hole Cards**: Receive your two private cards
-3. **Pre-flop Decision**: Evaluate your hand strength and position
-4. **Community Cards**: Watch as flop, turn, and river are dealt
-5. **Hand Analysis**: Get real-time feedback on your hand strength
-6. **Learn and Improve**: Use position advice to make better decisions
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🎯 Future Enhancements
-
-- [ ] Multi-hand session tracking
-- [ ] Advanced statistics and analysis
-- [ ] Tournament simulation
-- [ ] AI opponent integration
-- [ ] Hand history playback
-- [ ] Custom strategy profiles
-- [ ] Bankroll management tools
-
-## 🐛 Bug Reports
-
-If you find a bug, please create an issue with:
-- Description of the problem
-- Steps to reproduce
-- Expected vs actual behavior
-- Screenshots (if applicable)
-
-## 📞 Support
-
-For questions or support, please open an issue or contact the development team.
-
----
-
-**Happy Learning!** 🃏♠️♥️♦️♣️
+MIT License — Copyright (c) 2026 Cole Hoffman
