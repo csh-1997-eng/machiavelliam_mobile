@@ -70,3 +70,6 @@ tmp/
 .env.development.local
 .env.test.local
 .env.production.local
+# Node / Vercel
+node_modules/
+npm-debug.log*
