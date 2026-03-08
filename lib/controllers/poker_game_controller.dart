@@ -1,7 +1,18 @@
+/*
+ * Copyright (c) 2026 Cole Hoffman
+ * Licensed under MIT License - see LICENSE file for details
+ *
+ * Controller: poker_game_controller.dart
+ * Purpose: Game state machine — manages phases, card dealing, action tracking,
+ *          and Supabase session/hand persistence.
+ */
+
 import '../models/card.dart';
 import '../models/deck.dart';
 import '../models/game_settings.dart';
 import '../models/poker_hand.dart';
+import '../models/player_action.dart';
+import '../services/session_service.dart';
 
 enum GamePhase { preflop, flop, turn, river, showdown }
 
@@ -15,6 +26,11 @@ class PokerGameController {
   bool _handComplete = false;
   PokerHand? _finalHand;
 
+  // Session/hand tracking
+  String? _sessionId;
+  String? _currentHandId;
+  final Map<GamePhase, PlayerAction> _phaseActions = {};
+
   // Getters
   GameSettings get settings => _settings;
   List<PokerCard> get communityCards => List.unmodifiable(_communityCards);
@@ -23,8 +39,9 @@ class PokerGameController {
   bool get gameStarted => _gameStarted;
   bool get handComplete => _handComplete;
   PokerHand? get finalHand => _finalHand;
+  PlayerAction? get currentPhaseAction => _phaseActions[_currentPhase];
+  Map<GamePhase, PlayerAction> get allPhaseActions => Map.unmodifiable(_phaseActions);
 
-  // Initialize game with settings
   void initializeGame(GameSettings settings) {
     _settings = settings;
     _deck = Deck.createMultipleDecks(settings.numberOfDecks);
@@ -34,77 +51,102 @@ class PokerGameController {
     _gameStarted = false;
     _handComplete = false;
     _finalHand = null;
+    _phaseActions.clear();
+    _currentHandId = null;
+    // Fire and forget — session ID will be ready before any hand is dealt
+    _initSession();
   }
 
-  // Start a new hand
-  void startNewHand() {
-    if (!_gameStarted) {
-      _gameStarted = true;
-    }
-    
+  Future<void> _initSession() async {
+    _sessionId = await SessionService.createSession(_settings);
+  }
+
+  Future<void> startNewHand() async {
+    if (!_gameStarted) _gameStarted = true;
+
     _deck.reset();
     _communityCards = [];
     _userHoleCards = [];
     _currentPhase = GamePhase.preflop;
     _handComplete = false;
     _finalHand = null;
+    _phaseActions.clear();
+    _currentHandId = null;
 
-    // Deal hole cards to user
     _userHoleCards = _deck.dealCards(2);
+
+    if (_sessionId != null) {
+      _currentHandId = await SessionService.createHand(
+        sessionId: _sessionId!,
+        holeCards: _userHoleCards,
+      );
+    }
   }
 
-  // Deal flop (3 community cards)
+  /// Records what the player decided to do at the current phase.
+  void recordAction(ActionType action, {double? amount}) {
+    final playerAction = PlayerAction(action: action, amount: amount);
+    _phaseActions[_currentPhase] = playerAction;
+
+    if (_currentHandId != null) {
+      SessionService.recordAction(
+        handId: _currentHandId!,
+        phase: _currentPhase,
+        action: playerAction,
+      );
+    }
+  }
+
   void dealFlop() {
     if (_currentPhase != GamePhase.preflop) {
       throw StateError('Cannot deal flop in current phase: $_currentPhase');
     }
-    
     _communityCards = _deck.dealCards(3);
     _currentPhase = GamePhase.flop;
   }
 
-  // Deal turn (1 community card)
   void dealTurn() {
     if (_currentPhase != GamePhase.flop) {
       throw StateError('Cannot deal turn in current phase: $_currentPhase');
     }
-    
     _communityCards.addAll(_deck.dealCards(1));
     _currentPhase = GamePhase.turn;
   }
 
-  // Deal river (1 community card)
   void dealRiver() {
     if (_currentPhase != GamePhase.turn) {
       throw StateError('Cannot deal river in current phase: $_currentPhase');
     }
-    
     _communityCards.addAll(_deck.dealCards(1));
     _currentPhase = GamePhase.river;
   }
 
-  // Complete the hand and evaluate
   void completeHand() {
     if (_currentPhase != GamePhase.river) {
       throw StateError('Cannot complete hand in current phase: $_currentPhase');
     }
-    
     _currentPhase = GamePhase.showdown;
     _handComplete = true;
-    
-    // Evaluate the final hand
     _finalHand = PokerHand.evaluateHand(_userHoleCards, _communityCards);
+
+    if (_currentHandId != null && _finalHand != null) {
+      SessionService.completeHand(
+        handId: _currentHandId!,
+        communityCards: _communityCards,
+        finalHand: _finalHand!.handName,
+        handStrength: getHandStrength(),
+        phaseReached: _currentPhase.name,
+      );
+    }
   }
 
-  // Get current hand evaluation (if possible)
   PokerHand? getCurrentHandEvaluation() {
     if (_userHoleCards.length == 2 && _communityCards.length >= 3) {
       List<PokerCard> availableCommunityCards = _communityCards;
       if (_communityCards.length < 5) {
-        // Pad with empty cards for evaluation
         availableCommunityCards = List.from(_communityCards);
         while (availableCommunityCards.length < 5) {
-          availableCommunityCards.add(PokerCard(Suit.hearts, Rank.two)); // Dummy card
+          availableCommunityCards.add(PokerCard(Suit.hearts, Rank.two));
         }
       }
       return PokerHand.evaluateHand(_userHoleCards, availableCommunityCards);
@@ -112,32 +154,21 @@ class PokerGameController {
     return null;
   }
 
-  // Get hand strength percentage (approximate)
   double getHandStrength() {
     if (_userHoleCards.length != 2) return 0.0;
-    
     PokerHand? evaluation = getCurrentHandEvaluation();
     if (evaluation == null) return 0.0;
-    
-    // Simple hand strength calculation based on rank
     double strength = evaluation.rank.index / HandRank.values.length;
-    
-    // Adjust for kickers in some cases
     if (evaluation.kickers.isNotEmpty) {
-      double kickerBonus = evaluation.kickers.first / 14.0 * 0.1;
-      strength += kickerBonus;
+      strength += evaluation.kickers.first / 14.0 * 0.1;
     }
-    
     return (strength * 100).clamp(0.0, 100.0);
   }
 
-  // Get position-based advice
   String getPositionAdvice() {
     String baseAdvice = GameSettings.getPositionDescription(_settings.userPosition);
-    
     if (_userHoleCards.length == 2) {
       double handStrength = getHandStrength();
-      
       if (handStrength > 80) {
         return "$baseAdvice\n\nStrong hand! Consider betting or raising.";
       } else if (handStrength > 60) {
@@ -148,11 +179,9 @@ class PokerGameController {
         return "$baseAdvice\n\nWeak hand. Consider folding unless in late position.";
       }
     }
-    
     return baseAdvice;
   }
 
-  // Reset game completely
   void resetGame() {
     _gameStarted = false;
     _handComplete = false;
@@ -160,9 +189,10 @@ class PokerGameController {
     _userHoleCards = [];
     _currentPhase = GamePhase.preflop;
     _finalHand = null;
+    _phaseActions.clear();
+    _currentHandId = null;
   }
 
-  // Get phase description
   String getPhaseDescription() {
     switch (_currentPhase) {
       case GamePhase.preflop:
@@ -178,7 +208,6 @@ class PokerGameController {
     }
   }
 
-  // Check if we can proceed to next phase
   bool canProceedToNextPhase() {
     switch (_currentPhase) {
       case GamePhase.preflop:
@@ -194,7 +223,6 @@ class PokerGameController {
     }
   }
 
-  // Get next phase
   GamePhase? getNextPhase() {
     switch (_currentPhase) {
       case GamePhase.preflop:
@@ -206,15 +234,13 @@ class PokerGameController {
       case GamePhase.river:
         return GamePhase.showdown;
       case GamePhase.showdown:
-        return null; // Game complete
+        return null;
     }
   }
 
-  // Advance to next phase
   bool advanceToNextPhase() {
     GamePhase? nextPhase = getNextPhase();
     if (nextPhase == null) return false;
-    
     switch (nextPhase) {
       case GamePhase.flop:
         dealFlop();
@@ -231,7 +257,6 @@ class PokerGameController {
       default:
         return false;
     }
-    
     return true;
   }
 }
