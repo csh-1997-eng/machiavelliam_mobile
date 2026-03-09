@@ -9,11 +9,11 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+function setCors(res: VercelResponse) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+}
 
 interface RequestBody {
   phase: string;
@@ -31,7 +31,8 @@ interface RequestBody {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method === 'OPTIONS') return res.status(204).setHeaders(corsHeaders).end();
+  setCors(res);
+  if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const openAiKey = process.env.OPENAI_API_KEY;
@@ -84,7 +85,7 @@ Coaching guidelines:
     if (!openAiRes.ok) {
       const err = await openAiRes.text();
       console.error('[insights] OpenAI error:', err);
-      return res.status(502).setHeaders(corsHeaders).json({ error: 'OpenAI error' });
+      return res.status(502).json({ error: 'OpenAI error' });
     }
 
     const data = await openAiRes.json();
@@ -95,9 +96,9 @@ Coaching guidelines:
       data.choices?.[0]?.text ??
       JSON.stringify(data);
 
-    return res.status(200).setHeaders(corsHeaders).json({ insights });
+    return res.status(200).json({ insights });
   } catch (e) {
     console.error('[insights] error:', e);
-    return res.status(500).setHeaders(corsHeaders).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
