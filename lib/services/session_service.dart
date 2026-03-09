@@ -17,6 +17,7 @@ import 'api_client.dart';
 
 class SessionService {
   static Future<String?> createSession(GameSettings settings) async {
+    if (!kSessionPersistenceEnabled) return null;
     try {
       final res = await http.post(
         Uri.parse('$apiBaseUrl/api/sessions'),
@@ -26,6 +27,7 @@ class SessionService {
           'position': GameSettings.getPositionName(settings.userPosition),
           'smallBlind': settings.smallBlind,
           'bigBlind': settings.bigBlind,
+          'buyIn': settings.buyIn,
         }),
       );
       if (res.statusCode != 201) return null;

@@ -11,7 +11,8 @@ create table public.sessions (
   players      int         not null,
   position     text        not null,
   small_blind  numeric     not null,
-  big_blind    numeric     not null
+  big_blind    numeric     not null,
+  buy_in       numeric
 );
 
 -- Hands: one per dealt hand within a session
