@@ -4,7 +4,7 @@
  *
  * Controller: poker_game_controller.dart
  * Purpose: Game state machine — manages phases, card dealing, action tracking,
- *          and Supabase session/hand persistence.
+ *          and Neon session/hand persistence via Vercel API routes.
  */
 
 import '../models/card.dart';
@@ -29,6 +29,7 @@ class PokerGameController {
   // Session/hand tracking
   String? _sessionId;
   String? _currentHandId;
+  Future<void>? _sessionFuture;
   final Map<GamePhase, PlayerAction> _phaseActions = {};
 
   // Getters
@@ -53,8 +54,7 @@ class PokerGameController {
     _finalHand = null;
     _phaseActions.clear();
     _currentHandId = null;
-    // Fire and forget — session ID will be ready before any hand is dealt
-    _initSession();
+    _sessionFuture = _initSession();
   }
 
   Future<void> _initSession() async {
@@ -75,6 +75,7 @@ class PokerGameController {
 
     _userHoleCards = _deck.dealCards(2);
 
+    await _sessionFuture; // ensure session is ready before creating hand
     if (_sessionId != null) {
       _currentHandId = await SessionService.createHand(
         sessionId: _sessionId!,
@@ -125,6 +126,7 @@ class PokerGameController {
     if (_currentPhase != GamePhase.river) {
       throw StateError('Cannot complete hand in current phase: $_currentPhase');
     }
+    final lastBettingPhase = _currentPhase.name; // capture before updating to showdown
     _currentPhase = GamePhase.showdown;
     _handComplete = true;
     _finalHand = PokerHand.evaluateHand(_userHoleCards, _communityCards);
@@ -135,7 +137,7 @@ class PokerGameController {
         communityCards: _communityCards,
         finalHand: _finalHand!.handName,
         handStrength: getHandStrength(),
-        phaseReached: _currentPhase.name,
+        phaseReached: lastBettingPhase,
       );
     }
   }

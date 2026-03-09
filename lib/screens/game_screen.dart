@@ -12,6 +12,8 @@ import '../models/game_settings.dart';
 import '../models/poker_hand.dart';
 import '../models/player_action.dart';
 import '../controllers/poker_game_controller.dart';
+import '../services/insights_service.dart';
+import '../services/api_client.dart';
 
 class GameScreen extends StatefulWidget {
   final GameSettings settings;
@@ -28,6 +30,8 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> {
   late PokerGameController _gameController;
   bool _dealingHand = false;
+  bool _loadingInsights = false;
+  String? _insightsText;
 
   @override
   void initState() {
@@ -63,6 +67,8 @@ class _GameScreenState extends State<GameScreen> {
             _buildHandInfo(),
             const SizedBox(height: 20),
             _buildPlayerActionPanel(),
+            const SizedBox(height: 20),
+            _buildCoachingPanel(),
             const SizedBox(height: 20),
             _buildPositionAdvice(),
             const SizedBox(height: 20),
@@ -323,6 +329,71 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  Future<void> _fetchInsights() async {
+    if (!kCoachingEnabled) {
+      setState(() => _insightsText = 'Coaching not enabled yet.');
+      return;
+    }
+    setState(() {
+      _loadingInsights = true;
+      _insightsText = null;
+    });
+    final result = await InsightsService.getInsights(
+      userHoleCards: _gameController.userHoleCards,
+      communityCards: _gameController.communityCards,
+      currentEvaluation: _gameController.getCurrentHandEvaluation(),
+      handStrengthPercent: _gameController.getHandStrength(),
+      settings: _gameController.settings,
+      phase: _gameController.currentPhase.name,
+      playerAction: _gameController.currentPhaseAction,
+    );
+    if (mounted) {
+      setState(() {
+        _insightsText = result ?? 'No coaching available.';
+        _loadingInsights = false;
+      });
+    }
+  }
+
+  Widget _buildCoachingPanel() {
+    if (!_gameController.gameStarted) return const SizedBox.shrink();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('AI Coach', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ElevatedButton(
+                  onPressed: _loadingInsights ? null : _fetchInsights,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[800],
+                    foregroundColor: Colors.white,
+                  ),
+                  child: _loadingInsights
+                      ? const SizedBox(
+                          height: 14,
+                          width: 14,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Text('Get Coaching'),
+                ),
+              ],
+            ),
+            if (_insightsText != null) ...[
+              const SizedBox(height: 12),
+              Text(_insightsText!, style: const TextStyle(fontSize: 14)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildPositionAdvice() {
     return Card(
       child: Padding(
@@ -348,7 +419,7 @@ class _GameScreenState extends State<GameScreen> {
               child: ElevatedButton(
                 onPressed: !_gameController.gameStarted && !_dealingHand
                     ? () async {
-                        setState(() => _dealingHand = true);
+                        setState(() { _dealingHand = true; _insightsText = null; });
                         await _gameController.startNewHand();
                         if (mounted) setState(() => _dealingHand = false);
                       }
@@ -388,7 +459,7 @@ class _GameScreenState extends State<GameScreen> {
               child: ElevatedButton(
                 onPressed: _gameController.gameStarted && !_dealingHand
                     ? () async {
-                        setState(() => _dealingHand = true);
+                        setState(() { _dealingHand = true; _insightsText = null; });
                         await _gameController.startNewHand();
                         if (mounted) setState(() => _dealingHand = false);
                       }
