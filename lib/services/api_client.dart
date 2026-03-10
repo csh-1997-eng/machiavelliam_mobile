@@ -14,3 +14,4 @@ const String apiBaseUrl = String.fromEnvironment(
 // Feature flags — set to true to enable backend integration
 const bool kCoachingEnabled = false;
 const bool kSessionPersistenceEnabled = true;
+const bool kProfileEnabled = false;

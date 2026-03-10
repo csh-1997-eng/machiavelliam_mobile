@@ -29,6 +29,7 @@ interface RequestBody {
   handStrengthPercent: number;
   playerAction?: { action: string; amount?: number } | null;
   question?: string | null;
+  profileSummary?: string | null;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -40,7 +41,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!openAiKey) return res.status(500).json({ error: 'OPENAI_API_KEY not configured' });
 
   const body = req.body as RequestBody;
-  const { phase, settings, userHoleCards, communityCards, evaluation, handStrengthPercent, playerAction, question } = body;
+  const { phase, settings, userHoleCards, communityCards, evaluation, handStrengthPercent, playerAction, question, profileSummary } = body;
 
   const actionContext = playerAction
     ? `Player's action this street: ${playerAction.action.toUpperCase()}${playerAction.amount ? ` $${playerAction.amount}` : ''}.`
@@ -53,15 +54,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 - Hole cards: ${userHoleCards.join(', ') || 'N/A'}
 - Community cards: ${communityCards.join(', ') || 'None'}
 - Hand: ${evaluation ?? 'N/A'} (${Math.round(handStrengthPercent)}% raw strength)
-- ${actionContext}`;
+- ${actionContext}${profileSummary ? `\n- ${profileSummary}` : ''}`;
 
   const prompt = question
-    ? `You are a world-class poker coach — analytical, Machiavellian, deeply psychological. Your player is asking you a question mid-hand. Answer it directly and conversationally, like a sharp coach sitting next to them at the table. No bullet points. Speak to them, not at them. Be concise but complete — 2-4 sentences max unless the question genuinely demands more.
+    ? `You are a world-class poker coach — analytical, Machiavellian, deeply psychological. Your player is asking you a question mid-hand. Answer it directly and conversationally, like a sharp coach sitting next to them at the table. No bullet points. Speak to them, not at them. Be concise but complete — 2-4 sentences max unless the question genuinely demands more.${profileSummary ? ' Factor in the player profile when relevant.' : ''}
 
 ${gameContext}
 
 Player's question: "${question}"`
-    : `You are a world-class poker coach with the strategic mind of Machiavelli — analytical, ruthless, and deeply psychological. Your player just wants your read on the situation. Respond like you're talking to them directly — sharp, confident, no fluff. Use 4-6 tight bullets.
+    : `You are a world-class poker coach with the strategic mind of Machiavelli — analytical, ruthless, and deeply psychological. Your player just wants your read on the situation. Respond like you're talking to them directly — sharp, confident, no fluff. Use 4-6 tight bullets.${profileSummary ? ' Reference the player profile to personalize your coaching — call out their tendencies and leaks where relevant.' : ''}
 
 ${gameContext}
 

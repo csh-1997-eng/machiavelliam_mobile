@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'models/game_settings.dart';
 import 'screens/settings_screen.dart';
 import 'screens/game_screen.dart';
+import 'screens/profile_screen.dart';
 
 void main() {
   runApp(const PokerLearningApp());
@@ -231,6 +232,29 @@ class _HomeScreenState extends State<HomeScreen> {
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                          );
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.green[800],
+                          side: BorderSide(color: Colors.green[800]!),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Your Profile',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),

@@ -24,6 +24,7 @@ class InsightsService {
     required String phase,
     PlayerAction? playerAction,
     String? question,
+    String? profileSummary,
   }) async {
     try {
       final res = await http.post(
@@ -43,6 +44,7 @@ class InsightsService {
           'handStrengthPercent': handStrengthPercent,
           if (playerAction != null) 'playerAction': playerAction.toJson(),
           if (question != null && question.isNotEmpty) 'question': question,
+          if (profileSummary != null && profileSummary.isNotEmpty) 'profileSummary': profileSummary,
         }),
       );
       if (res.statusCode != 200) return null;

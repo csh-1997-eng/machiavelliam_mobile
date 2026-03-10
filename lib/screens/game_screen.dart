@@ -13,7 +13,9 @@ import '../models/poker_hand.dart';
 import '../models/player_action.dart';
 import '../controllers/poker_game_controller.dart';
 import '../services/insights_service.dart';
+import '../services/profile_service.dart';
 import '../services/api_client.dart';
+import 'profile_screen.dart';
 
 class GameScreen extends StatefulWidget {
   final GameSettings settings;
@@ -32,6 +34,7 @@ class _GameScreenState extends State<GameScreen> {
   bool _dealingHand = false;
   bool _loadingInsights = false;
   String? _insightsText;
+  String? _profileSummary;
   final TextEditingController _questionController = TextEditingController();
 
   @override
@@ -39,6 +42,14 @@ class _GameScreenState extends State<GameScreen> {
     super.initState();
     _gameController = PokerGameController();
     _gameController.initializeGame(widget.settings);
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final profile = await ProfileService.getProfile();
+    if (mounted && profile?.summary != null) {
+      setState(() => _profileSummary = profile!.summary);
+    }
   }
 
   @override
@@ -55,6 +66,13 @@ class _GameScreenState extends State<GameScreen> {
         backgroundColor: Colors.green[800],
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.person),
+            tooltip: 'Your Profile',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () => Navigator.of(context).pop(),
@@ -354,6 +372,7 @@ class _GameScreenState extends State<GameScreen> {
       phase: _gameController.currentPhase.name,
       playerAction: _gameController.currentPhaseAction,
       question: question,
+      profileSummary: _profileSummary,
     );
     if (mounted) {
       setState(() {
