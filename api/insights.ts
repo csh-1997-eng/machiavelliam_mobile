@@ -28,6 +28,7 @@ interface RequestBody {
   evaluation?: string | null;
   handStrengthPercent: number;
   playerAction?: { action: string; amount?: number } | null;
+  question?: string | null;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -39,33 +40,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!openAiKey) return res.status(500).json({ error: 'OPENAI_API_KEY not configured' });
 
   const body = req.body as RequestBody;
-  const { phase, settings, userHoleCards, communityCards, evaluation, handStrengthPercent, playerAction } = body;
+  const { phase, settings, userHoleCards, communityCards, evaluation, handStrengthPercent, playerAction, question } = body;
 
   const actionContext = playerAction
     ? `Player's action this street: ${playerAction.action.toUpperCase()}${playerAction.amount ? ` $${playerAction.amount}` : ''}.`
     : 'Player has not yet acted this street.';
 
-  const prompt = `You are a world-class poker coach with the strategic mind of Machiavelli — analytical, ruthless, and deeply psychological.
-
-Game State:
+  const gameContext = `Current hand:
 - Phase: ${phase}
-- Players: ${settings.players}
-- Hero position: ${settings.position}
+- Players: ${settings.players}, Hero position: ${settings.position}
 - Blinds: $${settings.smallBlind}/$${settings.bigBlind}
 - Hole cards: ${userHoleCards.join(', ') || 'N/A'}
 - Community cards: ${communityCards.join(', ') || 'None'}
-- Current hand: ${evaluation ?? 'N/A'}
-- Raw hand strength: ${Math.round(handStrengthPercent)}%
-- ${actionContext}
+- Hand: ${evaluation ?? 'N/A'} (${Math.round(handStrengthPercent)}% raw strength)
+- ${actionContext}`;
 
-Coaching guidelines:
-- Go beyond hand strength — think in ranges, equity, and pot dynamics
-- Factor in position ruthlessly: late position is power, early position is constraint
-- Address the meta-game: table image, opponent tendencies, exploitative vs. GTO play
-- If the player acted, critique or validate their decision with specific reasoning
-- Call out bluff spots, value bet sizing, trapping opportunities, and fold equity
-- Be direct and decisive — no hedging. Tell them what to do and exactly why.
-- Keep it to 4-6 tight, high-signal bullets. No padding.`;
+  const prompt = question
+    ? `You are a world-class poker coach — analytical, Machiavellian, deeply psychological. Your player is asking you a question mid-hand. Answer it directly and conversationally, like a sharp coach sitting next to them at the table. No bullet points. Speak to them, not at them. Be concise but complete — 2-4 sentences max unless the question genuinely demands more.
+
+${gameContext}
+
+Player's question: "${question}"`
+    : `You are a world-class poker coach with the strategic mind of Machiavelli — analytical, ruthless, and deeply psychological. Your player just wants your read on the situation. Respond like you're talking to them directly — sharp, confident, no fluff. Use 4-6 tight bullets.
+
+${gameContext}
+
+Coaching focus:
+- Think in ranges and equity, not just hand strength
+- Factor in position: late position is power, early is constraint
+- Address meta-game: table image, tendencies, exploitative vs. GTO
+- If the player acted, critique or validate with specific reasoning
+- Call out bluff spots, value sizing, trapping opportunities, fold equity
+- Be decisive. Tell them what to do and exactly why.`;
 
   try {
     const openAiRes = await fetch('https://api.openai.com/v1/responses', {

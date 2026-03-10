@@ -23,6 +23,7 @@ class InsightsService {
     required GameSettings settings,
     required String phase,
     PlayerAction? playerAction,
+    String? question,
   }) async {
     try {
       final res = await http.post(
@@ -41,6 +42,7 @@ class InsightsService {
           'evaluation': currentEvaluation?.handName,
           'handStrengthPercent': handStrengthPercent,
           if (playerAction != null) 'playerAction': playerAction.toJson(),
+          if (question != null && question.isNotEmpty) 'question': question,
         }),
       );
       if (res.statusCode != 200) return null;

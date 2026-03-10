@@ -32,12 +32,19 @@ class _GameScreenState extends State<GameScreen> {
   bool _dealingHand = false;
   bool _loadingInsights = false;
   String? _insightsText;
+  final TextEditingController _questionController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _gameController = PokerGameController();
     _gameController.initializeGame(widget.settings);
+  }
+
+  @override
+  void dispose() {
+    _questionController.dispose();
+    super.dispose();
   }
 
   @override
@@ -329,7 +336,7 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Future<void> _fetchInsights() async {
+  Future<void> _fetchInsights({String? question}) async {
     if (!kCoachingEnabled) {
       setState(() => _insightsText = 'Coaching not enabled yet.');
       return;
@@ -346,6 +353,7 @@ class _GameScreenState extends State<GameScreen> {
       settings: _gameController.settings,
       phase: _gameController.currentPhase.name,
       playerAction: _gameController.currentPhaseAction,
+      question: question,
     );
     if (mounted) {
       setState(() {
@@ -369,7 +377,7 @@ class _GameScreenState extends State<GameScreen> {
               children: [
                 const Text('AI Coach', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ElevatedButton(
-                  onPressed: _loadingInsights ? null : _fetchInsights,
+                  onPressed: _loadingInsights ? null : () => _fetchInsights(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green[800],
                     foregroundColor: Colors.white,
@@ -381,6 +389,42 @@ class _GameScreenState extends State<GameScreen> {
                           child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                         )
                       : const Text('Get Coaching'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _questionController,
+                    decoration: const InputDecoration(
+                      hintText: 'Ask the coach anything...',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    ),
+                    onSubmitted: (q) {
+                      if (q.trim().isNotEmpty) {
+                        _fetchInsights(question: q.trim());
+                        _questionController.clear();
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: _loadingInsights
+                      ? null
+                      : () {
+                          final q = _questionController.text.trim();
+                          if (q.isNotEmpty) {
+                            _fetchInsights(question: q);
+                            _questionController.clear();
+                          }
+                        },
+                  icon: const Icon(Icons.send),
+                  color: Colors.green[800],
                 ),
               ],
             ),
