@@ -15,6 +15,27 @@ import '../models/player_action.dart';
 import 'api_client.dart';
 
 class InsightsService {
+  static Future<String?> getScenarioInsights({
+    required String scenario,
+    String? profileSummary,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$apiBaseUrl/api/insights'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'scenario': scenario,
+          if (profileSummary != null && profileSummary.isNotEmpty) 'profileSummary': profileSummary,
+        }),
+      );
+      if (res.statusCode != 200) return null;
+      final data = jsonDecode(res.body) as Map;
+      return data['insights'] as String?;
+    } catch (e) {
+      return null;
+    }
+  }
+
   static Future<String?> getInsights({
     required List<PokerCard> userHoleCards,
     required List<PokerCard> communityCards,

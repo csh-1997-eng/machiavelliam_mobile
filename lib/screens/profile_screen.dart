@@ -49,8 +49,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Your Profile'),
-        backgroundColor: Colors.green[800],
-        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -61,7 +59,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Text(_error!, style: const TextStyle(fontSize: 16, color: Colors.grey)))
+              ? Center(child: Text(_error!, style: const TextStyle(fontSize: 16, color: Color(0xFF7A7A8A))))
               : _buildBody(),
     );
   }
@@ -110,13 +108,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(p.style, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                Text('${p.totalHands} hands', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                Text('${p.totalHands} hands', style: const TextStyle(fontSize: 14, color: Color(0xFF7A7A8A))),
               ],
             ),
             const SizedBox(height: 4),
             Text(
               _styleDescription(p.style),
-              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+              style: const TextStyle(fontSize: 14, color: Color(0xFF7A7A8A)),
             ),
           ],
         ),
@@ -146,7 +144,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 4),
             Text(
               'VPIP: % hands voluntarily entering pot  •  PFR: % hands with preflop raise  •  AF: aggression factor',
-              style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+              style: const TextStyle(fontSize: 11, color: Color(0xFF7A7A8A)),
             ),
           ],
         ),
@@ -159,14 +157,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       children: [
         Text(value, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: color)),
         const SizedBox(height: 4),
-        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w500)),
+        Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF7A7A8A), fontWeight: FontWeight.w500)),
       ],
     );
   }
 
   Widget _buildLeaksCard(PlayerProfile p) {
     return Card(
-      color: Colors.red[50],
+      color: const Color(0xFF2A1515),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: Color(0xFF5C2A2A)),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -174,9 +176,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.warning_amber_rounded, color: Colors.red[700], size: 20),
+                const Icon(Icons.warning_amber_rounded, color: Color(0xFFCF6679), size: 20),
                 const SizedBox(width: 8),
-                Text('Detected Leaks', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red[800])),
+                const Text('Detected Leaks', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFCF6679))),
               ],
             ),
             const SizedBox(height: 12),
@@ -185,7 +187,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('• ', style: TextStyle(color: Colors.red[700], fontWeight: FontWeight.bold)),
+                  const Text('• ', style: TextStyle(color: Color(0xFFCF6679), fontWeight: FontWeight.bold)),
                   Expanded(child: Text(leak, style: const TextStyle(fontSize: 14))),
                 ],
               ),
@@ -214,7 +216,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               },
               children: [
                 TableRow(
-                  decoration: BoxDecoration(color: Colors.grey[100]),
+                  decoration: const BoxDecoration(color: Color(0xFF252833)),
                   children: [
                     _tableHeader('Position'),
                     _tableHeader('Hands'),
@@ -240,7 +242,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _tableHeader(String text) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        child: Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+        child: Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF7A7A8A))),
       );
 
   Widget _tableCell(String text) => Padding(

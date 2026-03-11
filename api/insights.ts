@@ -16,17 +16,20 @@ function setCors(res: VercelResponse) {
 }
 
 interface RequestBody {
-  phase: string;
-  settings: {
+  // Scenario mode — free-form study input; all other fields optional when present
+  scenario?: string | null;
+  // Live hand mode
+  phase?: string;
+  settings?: {
     players: number;
     position: string;
     smallBlind: number;
     bigBlind: number;
   };
-  userHoleCards: string[];
-  communityCards: string[];
+  userHoleCards?: string[];
+  communityCards?: string[];
   evaluation?: string | null;
-  handStrengthPercent: number;
+  handStrengthPercent?: number;
   playerAction?: { action: string; amount?: number } | null;
   question?: string | null;
   profileSummary?: string | null;
@@ -41,28 +44,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!openAiKey) return res.status(500).json({ error: 'OPENAI_API_KEY not configured' });
 
   const body = req.body as RequestBody;
-  const { phase, settings, userHoleCards, communityCards, evaluation, handStrengthPercent, playerAction, question, profileSummary } = body;
+  const { scenario, phase, settings, userHoleCards, communityCards, evaluation, handStrengthPercent, playerAction, question, profileSummary } = body;
 
-  const actionContext = playerAction
-    ? `Player's action this street: ${playerAction.action.toUpperCase()}${playerAction.amount ? ` $${playerAction.amount}` : ''}.`
-    : 'Player has not yet acted this street.';
+  let prompt: string;
 
-  const gameContext = `Current hand:
+  if (scenario) {
+    // Scenario / study mode — no live hand context
+    prompt = `You are a world-class poker coach with the strategic mind of Machiavelli — analytical, ruthless, deeply psychological. A player is presenting you with a hypothetical poker scenario for study. Break it down like a professional. Be decisive and specific — no platitudes. Use 4-8 tight bullets.${profileSummary ? ' Factor in the player profile when relevant.' : ''}
+
+Scenario: ${scenario}
+
+Analysis focus:
+- Reconstruct the range dynamics for all parties
+- Identify the dominant line and explain why it beats the alternatives
+- What mistakes would a typical player make here, and why?
+- How would you exploit each weakness in this spot?
+- If there's a study lesson, name it directly`;
+  } else {
+    // Live hand mode
+    const actionContext = playerAction
+      ? `Player's action this street: ${playerAction.action.toUpperCase()}${playerAction.amount ? ` $${playerAction.amount}` : ''}.`
+      : 'Player has not yet acted this street.';
+
+    const gameContext = `Current hand:
 - Phase: ${phase}
-- Players: ${settings.players}, Hero position: ${settings.position}
-- Blinds: $${settings.smallBlind}/$${settings.bigBlind}
-- Hole cards: ${userHoleCards.join(', ') || 'N/A'}
-- Community cards: ${communityCards.join(', ') || 'None'}
-- Hand: ${evaluation ?? 'N/A'} (${Math.round(handStrengthPercent)}% raw strength)
+- Players: ${settings?.players}, Hero position: ${settings?.position}
+- Blinds: $${settings?.smallBlind}/$${settings?.bigBlind}
+- Hole cards: ${userHoleCards?.join(', ') || 'N/A'}
+- Community cards: ${communityCards?.join(', ') || 'None'}
+- Hand: ${evaluation ?? 'N/A'} (${Math.round(handStrengthPercent ?? 0)}% raw strength)
 - ${actionContext}${profileSummary ? `\n- ${profileSummary}` : ''}`;
 
-  const prompt = question
-    ? `You are a world-class poker coach — analytical, Machiavellian, deeply psychological. Your player is asking you a question mid-hand. Answer it directly and conversationally, like a sharp coach sitting next to them at the table. No bullet points. Speak to them, not at them. Be concise but complete — 2-4 sentences max unless the question genuinely demands more.${profileSummary ? ' Factor in the player profile when relevant.' : ''}
+    prompt = question
+      ? `You are a world-class poker coach — analytical, Machiavellian, deeply psychological. Your player is asking you a question mid-hand. Answer it directly and conversationally, like a sharp coach sitting next to them at the table. No bullet points. Speak to them, not at them. Be concise but complete — 2-4 sentences max unless the question genuinely demands more.${profileSummary ? ' Factor in the player profile when relevant.' : ''}
 
 ${gameContext}
 
 Player's question: "${question}"`
-    : `You are a world-class poker coach with the strategic mind of Machiavelli — analytical, ruthless, and deeply psychological. Your player just wants your read on the situation. Respond like you're talking to them directly — sharp, confident, no fluff. Use 4-6 tight bullets.${profileSummary ? ' Reference the player profile to personalize your coaching — call out their tendencies and leaks where relevant.' : ''}
+      : `You are a world-class poker coach with the strategic mind of Machiavelli — analytical, ruthless, and deeply psychological. Your player just wants your read on the situation. Respond like you're talking to them directly — sharp, confident, no fluff. Use 4-6 tight bullets.${profileSummary ? ' Reference the player profile to personalize your coaching — call out their tendencies and leaks where relevant.' : ''}
 
 ${gameContext}
 
@@ -73,6 +92,7 @@ Coaching focus:
 - If the player acted, critique or validate with specific reasoning
 - Call out bluff spots, value sizing, trapping opportunities, fold equity
 - Be decisive. Tell them what to do and exactly why.`;
+  }
 
   try {
     const openAiRes = await fetch('https://api.openai.com/v1/responses', {

@@ -15,3 +15,4 @@ const String apiBaseUrl = String.fromEnvironment(
 const bool kCoachingEnabled = false;
 const bool kSessionPersistenceEnabled = true;
 const bool kProfileEnabled = false;
+const bool kScenarioEnabled = false;

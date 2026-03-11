@@ -29,8 +29,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Game Settings'),
-        backgroundColor: Colors.green[800],
-        foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -122,7 +120,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           '${_currentSettings.numberOfPlayers} players',
           style: TextStyle(
             fontSize: 16,
-            color: Colors.grey[600],
+            color: const Color(0xFF7A7A8A),
           ),
         ),
       ],
@@ -141,7 +139,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           title: Text(GameSettings.getPositionName(position)),
           subtitle: Text(
             GameSettings.getPositionDescription(position),
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            style: TextStyle(fontSize: 12, color: const Color(0xFF7A7A8A)),
           ),
           value: position,
           groupValue: _currentSettings.userPosition,
@@ -174,7 +172,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           'Buy-in: \$${_currentSettings.buyIn.toStringAsFixed(0)}',
           style: TextStyle(
             fontSize: 16,
-            color: Colors.grey[600],
+            color: const Color(0xFF7A7A8A),
           ),
         ),
       ],
@@ -259,7 +257,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           '${_currentSettings.numberOfDecks} deck${_currentSettings.numberOfDecks > 1 ? 's' : ''}',
           style: TextStyle(
             fontSize: 16,
-            color: Colors.grey[600],
+            color: const Color(0xFF7A7A8A),
           ),
         ),
       ],
@@ -285,8 +283,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               });
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.grey[600],
-              foregroundColor: Colors.white,
+              backgroundColor: const Color(0xFF1A1D27),
+              foregroundColor: const Color(0xFF7A7A8A),
             ),
             child: const Text('Reset to Default'),
           ),
@@ -298,10 +296,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               widget.onSettingsChanged(_currentSettings);
               Navigator.of(context).pop();
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green[800],
-              foregroundColor: Colors.white,
-            ),
             child: const Text('Start Game'),
           ),
         ),
