@@ -13,7 +13,9 @@ import '../models/poker_hand.dart';
 import '../models/player_action.dart';
 import '../controllers/poker_game_controller.dart';
 import '../services/insights_service.dart';
+import '../services/profile_service.dart';
 import '../services/api_client.dart';
+import 'profile_screen.dart';
 
 class GameScreen extends StatefulWidget {
   final GameSettings settings;
@@ -32,12 +34,28 @@ class _GameScreenState extends State<GameScreen> {
   bool _dealingHand = false;
   bool _loadingInsights = false;
   String? _insightsText;
+  String? _profileSummary;
+  final TextEditingController _questionController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _gameController = PokerGameController();
     _gameController.initializeGame(widget.settings);
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final profile = await ProfileService.getProfile();
+    if (mounted && profile?.summary != null) {
+      setState(() => _profileSummary = profile!.summary);
+    }
+  }
+
+  @override
+  void dispose() {
+    _questionController.dispose();
+    super.dispose();
   }
 
   @override
@@ -45,9 +63,14 @@ class _GameScreenState extends State<GameScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Poker Hand Simulator'),
-        backgroundColor: Colors.green[800],
-        foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.person),
+            tooltip: 'Your Profile',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () => Navigator.of(context).pop(),
@@ -99,7 +122,7 @@ class _GameScreenState extends State<GameScreen> {
             const SizedBox(height: 8),
             Text(
               _gameController.getPhaseDescription(),
-              style: TextStyle(fontSize: 16, color: Colors.grey[600], fontWeight: FontWeight.w500),
+              style: const TextStyle(fontSize: 16, color: Color(0xFF7A7A8A), fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -110,7 +133,7 @@ class _GameScreenState extends State<GameScreen> {
   Widget _buildInfoItem(String label, String value) {
     return Column(
       children: [
-        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+        Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF7A7A8A))),
         const SizedBox(height: 4),
         Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
       ],
@@ -242,7 +265,7 @@ class _GameScreenState extends State<GameScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Your Action', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                Text(phase, style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w500)),
+                Text(phase, style: const TextStyle(fontSize: 12, color: Color(0xFF7A7A8A), fontWeight: FontWeight.w500)),
               ],
             ),
             const SizedBox(height: 12),
@@ -252,7 +275,7 @@ class _GameScreenState extends State<GameScreen> {
                 child: Text(
                   'Recorded: ${currentAction.actionName.toUpperCase()}'
                   '${currentAction.amount != null ? '  \$${currentAction.amount!.toStringAsFixed(0)}' : ''}',
-                  style: TextStyle(color: Colors.green[700], fontWeight: FontWeight.w600),
+                  style: const TextStyle(color: Color(0xFFB8963E), fontWeight: FontWeight.w600),
                 ),
               ),
             Row(
@@ -265,8 +288,8 @@ class _GameScreenState extends State<GameScreen> {
                         onPressed: () => _recordAction(action),
                         style: currentAction?.action == action
                             ? OutlinedButton.styleFrom(
-                                backgroundColor: Colors.green[100],
-                                side: BorderSide(color: Colors.green[700]!),
+                                backgroundColor: const Color(0xFF1A3A2A),
+                                side: const BorderSide(color: Color(0xFFB8963E)),
                               )
                             : null,
                         child: Text(action.name.toUpperCase(), style: const TextStyle(fontSize: 12)),
@@ -280,8 +303,8 @@ class _GameScreenState extends State<GameScreen> {
                       onPressed: () => _showBetDialog(),
                       style: currentAction?.action == ActionType.bet
                           ? OutlinedButton.styleFrom(
-                              backgroundColor: Colors.green[100],
-                              side: BorderSide(color: Colors.green[700]!),
+                              backgroundColor: const Color(0xFF1A3A2A),
+                              side: const BorderSide(color: Color(0xFFB8963E)),
                             )
                           : null,
                       child: const Text('BET', style: TextStyle(fontSize: 12)),
@@ -329,7 +352,7 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Future<void> _fetchInsights() async {
+  Future<void> _fetchInsights({String? question}) async {
     if (!kCoachingEnabled) {
       setState(() => _insightsText = 'Coaching not enabled yet.');
       return;
@@ -346,6 +369,8 @@ class _GameScreenState extends State<GameScreen> {
       settings: _gameController.settings,
       phase: _gameController.currentPhase.name,
       playerAction: _gameController.currentPhaseAction,
+      question: question,
+      profileSummary: _profileSummary,
     );
     if (mounted) {
       setState(() {
@@ -369,11 +394,7 @@ class _GameScreenState extends State<GameScreen> {
               children: [
                 const Text('AI Coach', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ElevatedButton(
-                  onPressed: _loadingInsights ? null : _fetchInsights,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green[800],
-                    foregroundColor: Colors.white,
-                  ),
+                  onPressed: _loadingInsights ? null : () => _fetchInsights(),
                   child: _loadingInsights
                       ? const SizedBox(
                           height: 14,
@@ -381,6 +402,42 @@ class _GameScreenState extends State<GameScreen> {
                           child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                         )
                       : const Text('Get Coaching'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _questionController,
+                    decoration: const InputDecoration(
+                      hintText: 'Ask the coach anything...',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    ),
+                    onSubmitted: (q) {
+                      if (q.trim().isNotEmpty) {
+                        _fetchInsights(question: q.trim());
+                        _questionController.clear();
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: _loadingInsights
+                      ? null
+                      : () {
+                          final q = _questionController.text.trim();
+                          if (q.isNotEmpty) {
+                            _fetchInsights(question: q);
+                            _questionController.clear();
+                          }
+                        },
+                  icon: const Icon(Icons.send),
+                  color: const Color(0xFFB8963E),
                 ),
               ],
             ),
@@ -424,12 +481,11 @@ class _GameScreenState extends State<GameScreen> {
                         if (mounted) setState(() => _dealingHand = false);
                       }
                     : null,
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.green[800], foregroundColor: Colors.white),
                 child: _dealingHand
                     ? const SizedBox(
                         height: 16,
                         width: 16,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        child: CircularProgressIndicator(color: Color(0xFF0D0F13), strokeWidth: 2),
                       )
                     : const Text('Deal Hand'),
               ),
@@ -446,7 +502,10 @@ class _GameScreenState extends State<GameScreen> {
                         });
                       }
                     : null,
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[800], foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E3A2A),
+                  foregroundColor: const Color(0xFFDDDDDD),
+                ),
                 child: Text(_getNextPhaseButtonText()),
               ),
             ),
@@ -464,7 +523,10 @@ class _GameScreenState extends State<GameScreen> {
                         if (mounted) setState(() => _dealingHand = false);
                       }
                     : null,
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF252833),
+                  foregroundColor: const Color(0xFFDDDDDD),
+                ),
                 child: const Text('New Hand'),
               ),
             ),
@@ -476,7 +538,10 @@ class _GameScreenState extends State<GameScreen> {
                     _gameController.resetGame();
                   });
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[600], foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1A1D27),
+                  foregroundColor: const Color(0xFF7A7A8A),
+                ),
                 child: const Text('Reset Game'),
               ),
             ),
