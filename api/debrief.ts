@@ -47,7 +47,7 @@ Debrief focus:
 }
 
 function getDebriefModel(analysisDepth: 'standard' | 'deep'): string {
-  return analysisDepth === 'deep' ? 'gpt-5' : 'gpt-5-mini';
+  return analysisDepth === 'deep' ? 'gpt-4.1' : 'gpt-4.1-mini';
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -130,7 +130,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         model: getDebriefModel(analysisDepth),
         input: prompt,
         max_output_tokens: 600,
-        temperature: 0.7,
       }),
     });
 
