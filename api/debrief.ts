@@ -55,7 +55,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const sql = neon(process.env.DATABASE_URL!);
 
   try {
-    const rows = await sql<HandRecord[]>`
+    const rows = (await sql`
       SELECT
         h.id AS hand_id,
         h.hole_cards,
@@ -68,7 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       LEFT JOIN player_actions pa ON pa.hand_id = h.id
       WHERE h.session_id = ${sessionId}
       ORDER BY h.created_at ASC, pa.created_at ASC
-    `;
+    `) as HandRecord[];
 
     if (!rows.length) {
       return res.status(404).json({ error: 'No hands found for this session' });
@@ -78,7 +78,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const handMap = new Map<string, HandRecord[]>();
     for (const row of rows) {
       if (!handMap.has(row.hand_id)) handMap.set(row.hand_id, []);
-      handMap.get(row.hand_id)!.push(row);
+      handMap.get(row.hand_id)!.push(row as HandRecord);
     }
 
     let hands = Array.from(handMap.entries());
