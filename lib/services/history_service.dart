@@ -72,13 +72,16 @@ class HandHistoryRecord {
 
 class HistoryService {
   static Future<({List<HandHistoryRecord> hands, bool hasMore})> getHistory({
-    required String sessionId,
+    String? sessionId,
     int page = 0,
   }) async {
     if (!kHistoryEnabled) return (hands: <HandHistoryRecord>[], hasMore: false);
     try {
       final uri = Uri.parse('$apiBaseUrl/api/history').replace(
-        queryParameters: {'sessionId': sessionId, 'page': page.toString()},
+        queryParameters: {
+          if (sessionId != null) 'sessionId': sessionId,
+          'page': page.toString(),
+        },
       );
       final res = await http.get(uri);
       if (res.statusCode != 200) return (hands: <HandHistoryRecord>[], hasMore: false);

@@ -404,6 +404,7 @@ class _GameScreenState extends State<GameScreen> {
       pot: _gameController.pot,
       heroStack: _gameController.heroStack,
       spr: _gameController.spr,
+      previousResponseId: InsightsService.lastResponseId,
     );
     if (mounted) {
       setState(() {

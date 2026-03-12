@@ -59,6 +59,7 @@ interface RequestBody {
   pot?: number;
   heroStack?: number;
   spr?: number;
+  previousResponseId?: string;
 }
 
 type InsightMode = 'scenario' | 'question' | 'live';
@@ -226,6 +227,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         model: getModelForInsightMode(mode),
         input: prompt,
         max_output_tokens: 400,
+        ...(body.previousResponseId ? { previous_response_id: body.previousResponseId } : {}),
       }),
     });
 
@@ -237,13 +239,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const data = await openAiRes.json();
     const insights =
+      data.output?.[0]?.content?.[0]?.text ??
       data.output_text ??
-      data.choices?.[0]?.message?.content?.[0]?.text ??
       data.choices?.[0]?.message?.content ??
-      data.choices?.[0]?.text ??
       JSON.stringify(data);
 
-    return res.status(200).json({ insights });
+    const responseId: string | undefined = data.id;
+    return res.status(200).json({ insights, responseId });
   } catch (e) {
     console.error('[insights] error:', e);
     return res.status(500).json({ error: 'Internal server error' });

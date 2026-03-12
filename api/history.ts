@@ -24,9 +24,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   const { sessionId, page } = req.query;
-  if (!sessionId || typeof sessionId !== 'string') {
-    return res.status(400).json({ error: 'sessionId required' });
-  }
+  const sessionFilter = sessionId && typeof sessionId === 'string' ? sessionId : null;
 
   const pageNum = Math.max(0, parseInt(String(page ?? '0'), 10) || 0);
   const offset = pageNum * PAGE_SIZE;
@@ -45,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         h.phase_reached,
         h.created_at
       FROM hands h
-      WHERE h.session_id = ${sessionId}
+      ${sessionFilter ? sql`WHERE h.session_id = ${sessionFilter}` : sql``}
       ORDER BY h.created_at DESC
       LIMIT ${PAGE_SIZE} OFFSET ${offset}
     `;
@@ -88,7 +86,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Check if there are more pages
     const [{ count }] = await sql`
-      SELECT COUNT(*)::int AS count FROM hands WHERE session_id = ${sessionId}
+      SELECT COUNT(*)::int AS count FROM hands ${sessionFilter ? sql`WHERE session_id = ${sessionFilter}` : sql``}
     `;
 
     return res.status(200).json({
