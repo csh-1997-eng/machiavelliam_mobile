@@ -11,11 +11,14 @@ import '../models/card.dart' as poker;
 import '../models/game_settings.dart';
 import '../models/poker_hand.dart';
 import '../models/player_action.dart';
+import '../models/opponent_profile.dart';
 import '../controllers/poker_game_controller.dart';
 import '../services/insights_service.dart';
 import '../services/profile_service.dart';
-import '../services/api_client.dart';
+import '../services/prompt_library.dart';
+import '../utils/table_seating.dart';
 import 'profile_screen.dart';
+import 'debrief_screen.dart';
 
 class GameScreen extends StatefulWidget {
   final GameSettings settings;
@@ -33,8 +36,10 @@ class _GameScreenState extends State<GameScreen> {
   late PokerGameController _gameController;
   bool _dealingHand = false;
   bool _loadingInsights = false;
+  bool _insightsReceivedForPhase = false;
   String? _insightsText;
   String? _profileSummary;
+  String _coachingMode = 'balanced';
   final TextEditingController _questionController = TextEditingController();
 
   @override
@@ -42,7 +47,19 @@ class _GameScreenState extends State<GameScreen> {
     super.initState();
     _gameController = PokerGameController();
     _gameController.initializeGame(widget.settings);
+    _initOpponents();
     _loadProfile();
+  }
+
+  void _initOpponents() {
+    final seats = TableSeating.seatLabels(
+      widget.settings.numberOfPlayers,
+      widget.settings.userPosition,
+    );
+    final opponents = seats
+        .map((seat) => OpponentProfile(seatLabel: seat, stack: widget.settings.buyIn))
+        .toList();
+    _gameController.setOpponents(opponents);
   }
 
   Future<void> _loadProfile() async {
@@ -91,6 +108,8 @@ class _GameScreenState extends State<GameScreen> {
             const SizedBox(height: 20),
             _buildPlayerActionPanel(),
             const SizedBox(height: 20),
+            _buildReadsPanel(),
+            const SizedBox(height: 20),
             _buildCoachingPanel(),
             const SizedBox(height: 20),
             _buildPositionAdvice(),
@@ -103,6 +122,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildGameInfo() {
+    final showStack = _gameController.gameStarted;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -119,6 +139,17 @@ class _GameScreenState extends State<GameScreen> {
                 ),
               ],
             ),
+            if (showStack) ...[
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildInfoItem('Pot', '\$${_gameController.pot.toStringAsFixed(0)}'),
+                  _buildInfoItem('Stack', '\$${_gameController.heroStack.toStringAsFixed(0)}'),
+                  _buildInfoItem('SPR', _gameController.spr.toStringAsFixed(1)),
+                ],
+              ),
+            ],
             const SizedBox(height: 8),
             Text(
               _gameController.getPhaseDescription(),
@@ -200,7 +231,7 @@ class _GameScreenState extends State<GameScreen> {
         border: Border.all(color: Colors.grey, width: 2),
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
-          BoxShadow(color: Colors.grey.withOpacity(0.3), spreadRadius: 1, blurRadius: 3, offset: const Offset(0, 2)),
+          BoxShadow(color: Colors.grey.withValues(alpha: 0.3), spreadRadius: 1, blurRadius: 3, offset: const Offset(0, 2)),
         ],
       ),
       child: Center(
@@ -353,14 +384,11 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Future<void> _fetchInsights({String? question}) async {
-    if (!kCoachingEnabled) {
-      setState(() => _insightsText = 'Coaching not enabled yet.');
-      return;
-    }
     setState(() {
       _loadingInsights = true;
       _insightsText = null;
     });
+    final opponents = _gameController.opponents;
     final result = await InsightsService.getInsights(
       userHoleCards: _gameController.userHoleCards,
       communityCards: _gameController.communityCards,
@@ -371,17 +399,26 @@ class _GameScreenState extends State<GameScreen> {
       playerAction: _gameController.currentPhaseAction,
       question: question,
       profileSummary: _profileSummary,
+      coachingMode: _coachingMode,
+      opponents: opponents.map((o) => o.toJson()).toList(),
+      pot: _gameController.pot,
+      heroStack: _gameController.heroStack,
+      spr: _gameController.spr,
     );
     if (mounted) {
       setState(() {
         _insightsText = result ?? 'No coaching available.';
         _loadingInsights = false;
+        // Lock "Get Coaching" for this phase — questions still allowed
+        if (question == null) _insightsReceivedForPhase = true;
       });
     }
   }
 
   Widget _buildCoachingPanel() {
     if (!_gameController.gameStarted) return const SizedBox.shrink();
+
+    final canGetCoaching = !_loadingInsights && !_insightsReceivedForPhase;
 
     return Card(
       child: Padding(
@@ -394,7 +431,7 @@ class _GameScreenState extends State<GameScreen> {
               children: [
                 const Text('AI Coach', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ElevatedButton(
-                  onPressed: _loadingInsights ? null : () => _fetchInsights(),
+                  onPressed: canGetCoaching ? () => _fetchInsights() : null,
                   child: _loadingInsights
                       ? const SizedBox(
                           height: 14,
@@ -402,6 +439,37 @@ class _GameScreenState extends State<GameScreen> {
                           child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                         )
                       : const Text('Get Coaching'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            // GTO / Exploit toggle — always interactive (affects next coaching call)
+            Row(
+              children: [
+                for (final mode in ['balanced', 'exploit'])
+                  GestureDetector(
+                    onTap: () => setState(() => _coachingMode = mode),
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _coachingMode == mode ? const Color(0xFFB8963E) : const Color(0xFF252833),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        mode == 'balanced' ? 'GTO' : 'Exploit',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: _coachingMode == mode ? const Color(0xFF0D0F13) : const Color(0xFF7A7A8A),
+                        ),
+                      ),
+                    ),
+                  ),
+                const Spacer(),
+                const Text(
+                  'MODE',
+                  style: TextStyle(fontSize: 10, color: Color(0xFF7A7A8A), letterSpacing: 1),
                 ),
               ],
             ),
@@ -451,6 +519,90 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  /// Opponent reads panel — visible once a hand is in progress.
+  /// Chip per seat: tap to cycle archetype. Gold text on last action.
+  Widget _buildReadsPanel() {
+    if (!_gameController.gameStarted) return const SizedBox.shrink();
+    final opponents = _gameController.opponents;
+    if (opponents.isEmpty) return const SizedBox.shrink();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Reads', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: opponents.map((opp) => _buildOpponentChip(opp)).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOpponentChip(OpponentProfile opp) {
+    final isActive = opp.isActive;
+    final action = opp.lastAction;
+
+    return GestureDetector(
+      onTap: () {
+        if (!isActive) return;
+        setState(() {
+          // Cycle through archetypes
+          final keys = kArchetypeOrder;
+          final currentIdx = keys.indexOf(opp.archetype.apiKey);
+          final nextKey = keys[(currentIdx + 1) % keys.length];
+          opp.archetype = PlayerArchetype.values.firstWhere((a) => a.apiKey == nextKey);
+        });
+      },
+      child: Opacity(
+        opacity: isActive ? 1.0 : 0.4,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1D27),
+            border: Border.all(
+              color: isActive ? const Color(0xFF252833) : const Color(0xFF1A1D27),
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                opp.seatLabel,
+                style: const TextStyle(fontSize: 11, color: Color(0xFF7A7A8A), fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                opp.archetype.label,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                '\$${opp.stack.toStringAsFixed(0)}',
+                style: const TextStyle(fontSize: 11, color: Color(0xFF7A7A8A)),
+              ),
+              if (action != null)
+                Text(
+                  action.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFB8963E),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPositionAdvice() {
     return Card(
       child: Padding(
@@ -476,7 +628,7 @@ class _GameScreenState extends State<GameScreen> {
               child: ElevatedButton(
                 onPressed: !_gameController.gameStarted && !_dealingHand
                     ? () async {
-                        setState(() { _dealingHand = true; _insightsText = null; });
+                        setState(() { _dealingHand = true; _insightsText = null; _insightsReceivedForPhase = false; });
                         await _gameController.startNewHand();
                         if (mounted) setState(() => _dealingHand = false);
                       }
@@ -499,6 +651,8 @@ class _GameScreenState extends State<GameScreen> {
                     ? () {
                         setState(() {
                           _gameController.advanceToNextPhase();
+                          _insightsReceivedForPhase = false;
+                          _insightsText = null;
                         });
                       }
                     : null,
@@ -518,7 +672,7 @@ class _GameScreenState extends State<GameScreen> {
               child: ElevatedButton(
                 onPressed: _gameController.gameStarted && !_dealingHand
                     ? () async {
-                        setState(() { _dealingHand = true; _insightsText = null; });
+                        setState(() { _dealingHand = true; _insightsText = null; _insightsReceivedForPhase = false; });
                         await _gameController.startNewHand();
                         if (mounted) setState(() => _dealingHand = false);
                       }
@@ -547,6 +701,26 @@ class _GameScreenState extends State<GameScreen> {
             ),
           ],
         ),
+        if (_gameController.gameStarted) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () {
+                final sessionId = _gameController.sessionId;
+                if (sessionId == null) return;
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => DebriefScreen(sessionId: sessionId)),
+                );
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF7A7A8A),
+                side: const BorderSide(color: Color(0xFF252833)),
+              ),
+              child: const Text('End Session'),
+            ),
+          ),
+        ],
       ],
     );
   }

@@ -13,7 +13,9 @@ import '../services/profile_service.dart';
 import '../services/api_client.dart';
 
 class ScenarioScreen extends StatefulWidget {
-  const ScenarioScreen({super.key});
+  final String? initialScenario;
+
+  const ScenarioScreen({super.key, this.initialScenario});
 
   @override
   State<ScenarioScreen> createState() => _ScenarioScreenState();
@@ -34,6 +36,9 @@ class _ScenarioScreenState extends State<ScenarioScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialScenario != null) {
+      _scenarioController.text = widget.initialScenario!;
+    }
     _loadProfile();
   }
 

@@ -12,7 +12,13 @@ const String apiBaseUrl = String.fromEnvironment(
 );
 
 // Feature flags — set to true to enable backend integration
-const bool kCoachingEnabled = false;
+const bool kCoachingEnabled = true;
 const bool kSessionPersistenceEnabled = true;
-const bool kProfileEnabled = false;
-const bool kScenarioEnabled = false;
+const bool kProfileEnabled = true;
+const bool kScenarioEnabled = true;
+const bool kDebriefEnabled = true;
+const bool kHistoryEnabled = true;
+
+// Mock flag — when true, InsightsService returns hardcoded strings (zero API cost).
+// Flip to false only when smoke-testing the real Vercel+OpenAI pipeline.
+const bool kMockInsights = false;

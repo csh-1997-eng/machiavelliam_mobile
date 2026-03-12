@@ -12,6 +12,7 @@ import 'screens/settings_screen.dart';
 import 'screens/game_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/scenario_screen.dart';
+import 'screens/hand_history_screen.dart';
 
 // App-wide palette
 const _kBg = Color(0xFF0D0F13);
@@ -46,7 +47,7 @@ class PokerLearningApp extends StatelessWidget {
           error: _kDanger,
         ),
         scaffoldBackgroundColor: _kBg,
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           color: _kSurface,
           elevation: 0,
           margin: EdgeInsets.zero,
@@ -169,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
           decoration: BoxDecoration(
             color: _kSurface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _kGold.withOpacity(0.35)),
+            border: Border.all(color: _kGold.withValues(alpha: 0.35)),
           ),
           child: const Icon(Icons.casino, size: 64, color: _kGold),
         ),
@@ -277,7 +278,46 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 50,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const HandHistoryScreen()),
+                  ),
+                  child: const Text('Hand History', style: TextStyle(fontSize: 14)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: SizedBox(
+                height: 50,
+                child: OutlinedButton(
+                  onPressed: _showQuickStart,
+                  child: const Text('Quick Start', style: TextStyle(fontSize: 14)),
+                ),
+              ),
+            ),
+          ],
+        ),
       ],
+    );
+  }
+
+  void _showQuickStart() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: _kSurface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        side: BorderSide(color: _kBorder),
+      ),
+      isScrollControlled: true,
+      builder: (_) => const _QuickStartSheet(),
     );
   }
 
@@ -340,6 +380,180 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 4),
         Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _kGold)),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Quick Start Sheet
+// ---------------------------------------------------------------------------
+
+class _QuickStartSheet extends StatelessWidget {
+  const _QuickStartSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.72,
+      minChildSize: 0.4,
+      maxChildSize: 0.92,
+      builder: (_, controller) => ListView(
+        controller: controller,
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+        children: [
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(
+                color: _kBorder,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const Text(
+            'QUICK START',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _kGold, letterSpacing: 2),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Everything you need to play smart from hand one.',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, height: 1.3),
+          ),
+          const SizedBox(height: 28),
+          _section('THE LOOP', [
+            _step('1', 'Configure your table', 'Set players, position, and buy-in in Settings. Your position is the single biggest variable in every decision you make — choose it deliberately.'),
+            _step('2', 'Deal a hand', 'Tap Start Simulation → Deal Hand. Your hole cards are dealt. No action is required yet — read the board first.'),
+            _step('3', 'Declare your action', 'Record what you actually did: Fold, Check, Call, or Bet. The coach needs your action to evaluate it — be honest.'),
+            _step('4', 'Get coached', 'Tap Get Coaching. The AI breaks down your position, your range, and the board. Read it before you advance.'),
+            _step('5', 'Advance the street', 'Deal Flop → Turn → River → Showdown. Repeat the action/coach cycle every street. That\'s where the learning compounds.'),
+          ]),
+          const SizedBox(height: 24),
+          _section('COACHING MODES', [
+            _bullet('GTO', 'Range-based. Frequency-correct. Position-aware. Use this when you want to understand the theoretically sound line — what a solver would do. Slow, rigorous, correct.'),
+            _bullet('Exploit', 'Opponent-specific. The coach studies the reads you\'ve set on each player and tells you exactly how to deviate from GTO to punish their leaks. Use this when you have reads.'),
+          ]),
+          const SizedBox(height: 24),
+          _section('OPPONENT READS', [
+            _bullet('Set archetypes', 'In the Reads panel, each opponent gets a chip. Tap it to cycle their archetype. The coach and the AI engine both use this — it affects how opponents act and what coaching you receive.'),
+            _bullet('Nit', 'Plays 13% of hands. Folds to everything. Steal relentlessly.'),
+            _bullet('TAG', 'The default threat. Solid, position-aware, balanced. Respect their bets.'),
+            _bullet('LAG', 'Bluffs often, plays wide, uses position. Tighten up and trap.'),
+            _bullet('Station', 'Calls everything, never folds. Stop bluffing. Bet value all day.'),
+            _bullet('Maniac', 'Bets 50%+ of hands, random sizings. Tighten, trap, let them hang.'),
+          ]),
+          const SizedBox(height: 24),
+          _section('OTHER TOOLS', [
+            _bullet('Scenario Coach', 'Study any spot outside a live hand. Paste in a hand history, describe a situation, ask a theoretical question. The coach has no ego about it.'),
+            _bullet('Ask the Coach', 'Mid-hand Q&A. Type a specific question — stack-to-pot ratio, calling range, blocker effects — and get a direct answer. Use it.'),
+            _bullet('Session Debrief', 'End Session → the coach reviews every decision you made and surfaces the patterns. This is where most players improve fastest.'),
+            _bullet('Hand History', 'Browse past hands. Expand any of them, see your action trail, and hit Coach This Hand to drill a specific spot in Scenario Mode.'),
+          ]),
+          const SizedBox(height: 28),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0D0F13),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: _kGold.withValues(alpha: 0.3)),
+            ),
+            child: const Text(
+              'The game punishes passivity. Get in position. Make decisions. '
+              'Let the coach tell you where you were wrong — then do it better next time.',
+              style: TextStyle(
+                fontSize: 13,
+                color: _kTextSecondary,
+                height: 1.6,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Widget _section(String title, List<Widget> children) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: _kTextSecondary,
+            letterSpacing: 1.4,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...children,
+      ],
+    );
+  }
+
+  static Widget _step(String num, String title, String body) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            margin: const EdgeInsets.only(top: 1, right: 12),
+            decoration: BoxDecoration(
+              color: _kGold,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Center(
+              child: Text(
+                num,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: _kBg,
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 3),
+                Text(body, style: const TextStyle(fontSize: 13, color: _kTextSecondary, height: 1.5)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Widget _bullet(String title, String body) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('— ', style: TextStyle(color: _kGold, fontWeight: FontWeight.bold, fontSize: 14)),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(fontSize: 13, color: _kTextPrimary, height: 1.5),
+                children: [
+                  TextSpan(text: '$title  ', style: const TextStyle(fontWeight: FontWeight.w700)),
+                  TextSpan(text: body, style: const TextStyle(color: _kTextSecondary)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

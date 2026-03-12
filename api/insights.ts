@@ -4,15 +4,34 @@
  *
  * API Route: /api/insights
  * Purpose: Generate Machiavellian poker coaching advice via OpenAI.
- *          Receives hand state + player's action, returns nuanced coaching.
+ *          Handles live hand mode, free-form Q&A, and scenario study mode.
+ *          Prompt construction is fully typed — add new modes via PromptContext.
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-function setCors(res: VercelResponse) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+// ---------------------------------------------------------------------------
+// Archetype library — mirrors lib/services/prompt_library.dart on the Dart side
+// ---------------------------------------------------------------------------
+
+const ARCHETYPE_DESCRIPTIONS: Record<string, string> = {
+  nit: "Extremely tight. Plays only 10-15% of hands, raises 8-12%. Folds to aggression >70%. Almost never bluffs. Exploit by stealing their blinds relentlessly and folding to their strength.",
+  tag: "Tight-aggressive. Plays 16-24%, raises 14-20%. Balanced, selective, respects position. Deny them positional edges — don't pay off their value bets.",
+  lag: "Loose-aggressive. Plays 25-40%, raises 20-32%. High 3-bet frequency (12-16%). Bluffs a lot. Counter with a tighter calling range and trapping strong hands.",
+  callingStation: "Loose-passive. Plays 35-55%, raises <10%. Calls down with weak holdings, rarely folds once invested. Never bluff them — bet relentlessly for value and size up on the river.",
+  maniac: "Extremely aggressive. Plays 50%+, raises 35%+. Unpredictable sizing, bluffs at extreme frequency. Trap them — let them hang themselves.",
+};
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface OpponentSummary {
+  seat: string;
+  archetype: string;
+  stack?: number;
+  lastAction?: string | null;
+  isActive?: boolean;
 }
 
 interface RequestBody {
@@ -33,7 +52,130 @@ interface RequestBody {
   playerAction?: { action: string; amount?: number } | null;
   question?: string | null;
   profileSummary?: string | null;
+  // Phase 9+: coaching philosophy
+  coachingMode?: 'balanced' | 'exploit';
+  // Phase 10+: opponent simulation context
+  opponents?: OpponentSummary[];
+  pot?: number;
+  heroStack?: number;
+  spr?: number;
 }
+
+// ---------------------------------------------------------------------------
+// Prompt helpers
+// ---------------------------------------------------------------------------
+
+function buildOpponentBlock(opponents?: OpponentSummary[]): string {
+  if (!opponents?.length) return '';
+  const active = opponents.filter(o => o.isActive !== false);
+  const folded = opponents.filter(o => o.isActive === false);
+  const lines: string[] = [];
+  if (active.length) {
+    lines.push('Active opponents:');
+    for (const o of active) {
+      const stack = o.stack != null ? ` ($${o.stack.toFixed(0)})` : '';
+      const action = o.lastAction ? `, last action: ${o.lastAction.toUpperCase()}` : '';
+      const desc = ARCHETYPE_DESCRIPTIONS[o.archetype] ?? o.archetype;
+      lines.push(`  ${o.seat}${stack} — ${desc}${action}`);
+    }
+  }
+  if (folded.length) {
+    lines.push(`Folded: ${folded.map(o => `${o.seat} (${o.archetype})`).join(', ')}`);
+  }
+  return lines.join('\n');
+}
+
+function buildGameContext(body: RequestBody): string {
+  const { phase, settings, userHoleCards, communityCards, evaluation, handStrengthPercent, playerAction, profileSummary, pot, heroStack, spr } = body;
+
+  const actionContext = playerAction
+    ? `Player's action this street: ${playerAction.action.toUpperCase()}${playerAction.amount ? ` $${playerAction.amount}` : ''}.`
+    : 'Player has not yet acted this street.';
+
+  const stackLine = (pot != null && heroStack != null)
+    ? `\n- Pot: $${pot.toFixed(0)}  Hero stack: $${heroStack.toFixed(0)}${spr != null ? `  SPR: ${spr.toFixed(1)}` : ''}`
+    : '';
+
+  const opponentBlock = buildOpponentBlock(body.opponents);
+
+  return `Current hand:
+- Phase: ${phase}
+- Players: ${settings?.players}, Hero position: ${settings?.position}
+- Blinds: $${settings?.smallBlind}/$${settings?.bigBlind}
+- Hole cards: ${userHoleCards?.join(', ') || 'N/A'}
+- Community cards: ${communityCards?.join(', ') || 'None'}
+- Hand: ${evaluation ?? 'N/A'} (${Math.round(handStrengthPercent ?? 0)}% raw strength)${stackLine}
+- ${actionContext}${profileSummary ? `\n- ${profileSummary}` : ''}${opponentBlock ? `\n${opponentBlock}` : ''}`;
+}
+
+function buildCoachingFocus(coachingMode: 'balanced' | 'exploit', hasOpponents: boolean): string {
+  if (coachingMode === 'exploit' && hasOpponents) {
+    return `Coaching focus (EXPLOIT mode):
+- Study the opponent profiles above — identify the most exploitable player in this spot
+- Name the specific exploit: what are they doing wrong and how do you punish it?
+- Deviate from GTO only where their leak justifies it — be precise about the deviation
+- If multiple opponents remain, prioritize: who do you want in this pot and why?
+- Pot odds and SPR: are the stack/pot dynamics favorable for your exploit line?
+- Be decisive. Name the seat, name the weakness, name the play.`;
+  }
+  return `Coaching focus (GTO/BALANCED mode):
+- Think in ranges and equity, not just hand strength
+- Factor in position: late position is power, early is constraint
+- Evaluate frequencies: are you bluffing and value-betting at the right ratio?
+- Address pot odds and SPR: does the math support continuing?
+- If the player acted, critique or validate with specific reasoning
+- Be decisive. Tell them what to do and exactly why.`;
+}
+
+function buildScenarioPrompt(body: RequestBody): string {
+  const { scenario, profileSummary } = body;
+  return `You are a world-class poker coach with the strategic mind of Machiavelli — analytical, ruthless, deeply psychological. A player is presenting you with a hypothetical poker scenario for study. Break it down like a professional. Be decisive and specific — no platitudes. Use 4-8 tight bullets.${profileSummary ? ' Factor in the player profile when relevant.' : ''}
+
+Scenario: ${scenario}
+
+Analysis focus:
+- Reconstruct the range dynamics for all parties
+- Identify the dominant line and explain why it beats the alternatives
+- What mistakes would a typical player make here, and why?
+- How would you exploit each weakness in this spot?
+- If there's a study lesson, name it directly`;
+}
+
+function buildQuestionPrompt(body: RequestBody): string {
+  const { question, profileSummary } = body;
+  const gameContext = buildGameContext(body);
+  return `You are a world-class poker coach — analytical, Machiavellian, deeply psychological. Your player is asking you a question mid-hand. Answer it directly and conversationally, like a sharp coach sitting next to them at the table. No bullet points. Speak to them, not at them. Be concise but complete — 2-4 sentences max unless the question genuinely demands more.${profileSummary ? ' Factor in the player profile when relevant.' : ''}
+
+${gameContext}
+
+Player's question: "${question}"`;
+}
+
+function buildLivePrompt(body: RequestBody): string {
+  const { profileSummary, coachingMode = 'balanced', opponents } = body;
+  const gameContext = buildGameContext(body);
+  const coachingFocus = buildCoachingFocus(coachingMode, !!opponents?.length);
+
+  return `You are a world-class poker coach with the strategic mind of Machiavelli — analytical, ruthless, and deeply psychological. Your player wants your read on the situation. Respond like you're talking to them directly — sharp, confident, no fluff. Use 4-6 tight bullets.${profileSummary ? ' Reference the player profile to personalize your coaching — call out their tendencies and leaks where relevant.' : ''}
+
+${gameContext}
+
+${coachingFocus}`;
+}
+
+// ---------------------------------------------------------------------------
+// CORS
+// ---------------------------------------------------------------------------
+
+function setCors(res: VercelResponse) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+}
+
+// ---------------------------------------------------------------------------
+// Handler
+// ---------------------------------------------------------------------------
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   setCors(res);
@@ -44,54 +186,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!openAiKey) return res.status(500).json({ error: 'OPENAI_API_KEY not configured' });
 
   const body = req.body as RequestBody;
-  const { scenario, phase, settings, userHoleCards, communityCards, evaluation, handStrengthPercent, playerAction, question, profileSummary } = body;
 
   let prompt: string;
-
-  if (scenario) {
-    // Scenario / study mode — no live hand context
-    prompt = `You are a world-class poker coach with the strategic mind of Machiavelli — analytical, ruthless, deeply psychological. A player is presenting you with a hypothetical poker scenario for study. Break it down like a professional. Be decisive and specific — no platitudes. Use 4-8 tight bullets.${profileSummary ? ' Factor in the player profile when relevant.' : ''}
-
-Scenario: ${scenario}
-
-Analysis focus:
-- Reconstruct the range dynamics for all parties
-- Identify the dominant line and explain why it beats the alternatives
-- What mistakes would a typical player make here, and why?
-- How would you exploit each weakness in this spot?
-- If there's a study lesson, name it directly`;
+  if (body.scenario) {
+    prompt = buildScenarioPrompt(body);
+  } else if (body.question) {
+    prompt = buildQuestionPrompt(body);
   } else {
-    // Live hand mode
-    const actionContext = playerAction
-      ? `Player's action this street: ${playerAction.action.toUpperCase()}${playerAction.amount ? ` $${playerAction.amount}` : ''}.`
-      : 'Player has not yet acted this street.';
-
-    const gameContext = `Current hand:
-- Phase: ${phase}
-- Players: ${settings?.players}, Hero position: ${settings?.position}
-- Blinds: $${settings?.smallBlind}/$${settings?.bigBlind}
-- Hole cards: ${userHoleCards?.join(', ') || 'N/A'}
-- Community cards: ${communityCards?.join(', ') || 'None'}
-- Hand: ${evaluation ?? 'N/A'} (${Math.round(handStrengthPercent ?? 0)}% raw strength)
-- ${actionContext}${profileSummary ? `\n- ${profileSummary}` : ''}`;
-
-    prompt = question
-      ? `You are a world-class poker coach — analytical, Machiavellian, deeply psychological. Your player is asking you a question mid-hand. Answer it directly and conversationally, like a sharp coach sitting next to them at the table. No bullet points. Speak to them, not at them. Be concise but complete — 2-4 sentences max unless the question genuinely demands more.${profileSummary ? ' Factor in the player profile when relevant.' : ''}
-
-${gameContext}
-
-Player's question: "${question}"`
-      : `You are a world-class poker coach with the strategic mind of Machiavelli — analytical, ruthless, and deeply psychological. Your player just wants your read on the situation. Respond like you're talking to them directly — sharp, confident, no fluff. Use 4-6 tight bullets.${profileSummary ? ' Reference the player profile to personalize your coaching — call out their tendencies and leaks where relevant.' : ''}
-
-${gameContext}
-
-Coaching focus:
-- Think in ranges and equity, not just hand strength
-- Factor in position: late position is power, early is constraint
-- Address meta-game: table image, tendencies, exploitative vs. GTO
-- If the player acted, critique or validate with specific reasoning
-- Call out bluff spots, value sizing, trapping opportunities, fold equity
-- Be decisive. Tell them what to do and exactly why.`;
+    prompt = buildLivePrompt(body);
   }
 
   try {
@@ -104,7 +206,7 @@ Coaching focus:
       body: JSON.stringify({
         model: 'gpt-4.1-mini',
         input: prompt,
-        max_output_tokens: 500,
+        max_output_tokens: 400,
         temperature: 0.7,
       }),
     });
