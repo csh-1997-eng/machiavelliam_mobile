@@ -174,10 +174,10 @@ function getInsightMode(body: RequestBody): InsightMode {
 function getModelForInsightMode(mode: InsightMode): string {
   switch (mode) {
     case 'scenario':
-      return 'gpt-5';
+      return 'gpt-4.1';
     case 'question':
     case 'live':
-      return 'gpt-5-mini';
+      return 'gpt-4.1-mini';
   }
 }
 
@@ -226,7 +226,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         model: getModelForInsightMode(mode),
         input: prompt,
         max_output_tokens: 400,
-        temperature: 0.7,
       }),
     });
 
