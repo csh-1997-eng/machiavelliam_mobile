@@ -39,12 +39,7 @@ class _HandHistoryScreenState extends State<HandHistoryScreen> {
       setState(() => _loading = false);
       return;
     }
-    final sessionId = widget.sessionId;
-    if (sessionId == null) {
-      setState(() => _loading = false);
-      return;
-    }
-    final result = await HistoryService.getHistory(sessionId: sessionId, page: _page);
+    final result = await HistoryService.getHistory(sessionId: widget.sessionId, page: _page);
     if (mounted) {
       setState(() {
         _hands.addAll(result.hands);

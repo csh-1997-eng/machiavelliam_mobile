@@ -32,6 +32,7 @@ const _kMockScenario = '• AJo on BTN facing MP raise + CO call: classic squeez
     '• Study lesson: position is power, but initiative is force — combine them when you can';
 
 class InsightsService {
+  static String? lastResponseId;
   static Future<String?> getScenarioInsights({
     required String scenario,
     String? profileSummary,
@@ -70,6 +71,7 @@ class InsightsService {
     double? pot,
     double? heroStack,
     double? spr,
+    String? previousResponseId,
   }) async {
     if (kMockInsights) {
       return (question != null && question.isNotEmpty) ? _kMockQuestion : _kMockLive;
@@ -99,10 +101,12 @@ class InsightsService {
           if (pot != null) 'pot': pot,
           if (heroStack != null) 'heroStack': heroStack,
           if (spr != null) 'spr': spr,
+          if (previousResponseId != null) 'previousResponseId': previousResponseId,
         }),
       );
       if (res.statusCode != 200) return null;
       final data = jsonDecode(res.body) as Map;
+      lastResponseId = data['responseId'] as String?;
       return data['insights'] as String?;
     } catch (e) {
       return null;
