@@ -64,7 +64,7 @@ Vercel auto-deploys on push to `main`. Preview deployments created on `dev` bran
 No local API server needed for mobile development. Run Flutter against the deployed Vercel URL:
 
 ```bash
-flutter run --dart-define=API_BASE_URL=https://your-project.vercel.app
+flutter run --dart-define=API_BASE_URL=https://machiavelliam.vercel.app
 ```
 
 For local API iteration (optional):

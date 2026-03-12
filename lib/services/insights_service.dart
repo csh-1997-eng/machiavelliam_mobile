@@ -14,11 +14,30 @@ import '../models/game_settings.dart';
 import '../models/player_action.dart';
 import 'api_client.dart';
 
+// Mock responses used when kMockInsights = true (zero API cost).
+const _kMockLive = '• Strong preflop hand — you\'re ahead of most calling ranges\n'
+    '• Position advantage: use it to control pot size\n'
+    '• C-bet the flop at ~60% pot — take it down or get information\n'
+    '• If called, slow down on non-improving turns unless you pick up equity\n'
+    '• Watch for check-raises — they\'re telling you something';
+
+const _kMockQuestion = 'Given your position and hand strength, the call is mathematically sound here. '
+    'The pot odds justify seeing another card. '
+    'Be prepared to fold the turn if the board shifts against you.';
+
+const _kMockScenario = '• AJo on BTN facing MP raise + CO call: classic squeeze or fold spot\n'
+    '• Squeezing builds the pot with initiative; flatting traps you in bad position multi-way\n'
+    '• Against a tight MP raiser, AJo is dominated often enough to make folding defensible\n'
+    '• If stacks are 100BB+, prefer a squeeze to 3x the open; use your stack as leverage\n'
+    '• Study lesson: position is power, but initiative is force — combine them when you can';
+
 class InsightsService {
   static Future<String?> getScenarioInsights({
     required String scenario,
     String? profileSummary,
   }) async {
+    if (kMockInsights) return _kMockScenario;
+    if (!kScenarioEnabled) return null;
     try {
       final res = await http.post(
         Uri.parse('$apiBaseUrl/api/insights'),
@@ -46,7 +65,16 @@ class InsightsService {
     PlayerAction? playerAction,
     String? question,
     String? profileSummary,
+    String coachingMode = 'balanced',
+    List<Map<String, dynamic>>? opponents,
+    double? pot,
+    double? heroStack,
+    double? spr,
   }) async {
+    if (kMockInsights) {
+      return (question != null && question.isNotEmpty) ? _kMockQuestion : _kMockLive;
+    }
+    if (!kCoachingEnabled) return null;
     try {
       final res = await http.post(
         Uri.parse('$apiBaseUrl/api/insights'),
@@ -63,9 +91,14 @@ class InsightsService {
           'communityCards': communityCards.map((c) => c.toString()).toList(),
           'evaluation': currentEvaluation?.handName,
           'handStrengthPercent': handStrengthPercent,
+          'coachingMode': coachingMode,
           if (playerAction != null) 'playerAction': playerAction.toJson(),
           if (question != null && question.isNotEmpty) 'question': question,
           if (profileSummary != null && profileSummary.isNotEmpty) 'profileSummary': profileSummary,
+          if (opponents != null && opponents.isNotEmpty) 'opponents': opponents,
+          if (pot != null) 'pot': pot,
+          if (heroStack != null) 'heroStack': heroStack,
+          if (spr != null) 'spr': spr,
         }),
       );
       if (res.statusCode != 200) return null;
