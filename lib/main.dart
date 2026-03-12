@@ -304,6 +304,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
+        const SizedBox(height: 14),
+        const Text(
+          'Coaching inputs may be used by OpenAI to improve AI models.',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 10, color: Color(0xFF4A4A5A), height: 1.4),
+        ),
       ],
     );
   }

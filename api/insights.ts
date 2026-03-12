@@ -61,6 +61,8 @@ interface RequestBody {
   spr?: number;
 }
 
+type InsightMode = 'scenario' | 'question' | 'live';
+
 // ---------------------------------------------------------------------------
 // Prompt helpers
 // ---------------------------------------------------------------------------
@@ -163,6 +165,22 @@ ${gameContext}
 ${coachingFocus}`;
 }
 
+function getInsightMode(body: RequestBody): InsightMode {
+  if (body.scenario) return 'scenario';
+  if (body.question) return 'question';
+  return 'live';
+}
+
+function getModelForInsightMode(mode: InsightMode): string {
+  switch (mode) {
+    case 'scenario':
+      return 'gpt-5';
+    case 'question':
+    case 'live':
+      return 'gpt-5-mini';
+  }
+}
+
 // ---------------------------------------------------------------------------
 // CORS
 // ---------------------------------------------------------------------------
@@ -186,11 +204,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!openAiKey) return res.status(500).json({ error: 'OPENAI_API_KEY not configured' });
 
   const body = req.body as RequestBody;
+  const mode = getInsightMode(body);
 
   let prompt: string;
-  if (body.scenario) {
+  if (mode === 'scenario') {
     prompt = buildScenarioPrompt(body);
-  } else if (body.question) {
+  } else if (mode === 'question') {
     prompt = buildQuestionPrompt(body);
   } else {
     prompt = buildLivePrompt(body);
@@ -204,7 +223,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         Authorization: `Bearer ${openAiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4.1-mini',
+        model: getModelForInsightMode(mode),
         input: prompt,
         max_output_tokens: 400,
         temperature: 0.7,

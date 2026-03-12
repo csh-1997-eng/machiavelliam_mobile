@@ -7,7 +7,7 @@
 | Mobile app | Flutter (Dart), cross-platform: iOS / Android / Web |
 | API | Vercel serverless functions (TypeScript, Node 20) |
 | Database | Neon serverless Postgres |
-| AI | OpenAI GPT-4.1-mini |
+| AI | OpenAI Responses API (`gpt-5-mini` default, `gpt-5` for scenario study / deep debrief) |
 | Package manager (local) | Homebrew (macOS) |
 
 ---

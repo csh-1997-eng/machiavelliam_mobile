@@ -19,14 +19,20 @@ const _kMockDebrief = '• Strong preflop discipline — you avoided speculative
     'Next session: commit to a bet size before you act, not after. Sizing is intent.';
 
 class DebriefService {
-  static Future<String?> getDebrief({required String sessionId}) async {
+  static Future<String?> getDebrief({
+    required String sessionId,
+    String analysisDepth = 'standard',
+  }) async {
     if (kMockInsights) return _kMockDebrief;
     if (!kDebriefEnabled) return null;
     try {
       final res = await http.post(
         Uri.parse('$apiBaseUrl/api/debrief'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'sessionId': sessionId}),
+        body: jsonEncode({
+          'sessionId': sessionId,
+          'analysisDepth': analysisDepth,
+        }),
       );
       if (res.statusCode != 200) return null;
       final data = jsonDecode(res.body) as Map;

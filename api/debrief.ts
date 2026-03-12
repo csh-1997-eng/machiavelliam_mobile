@@ -26,6 +26,11 @@ interface HandRecord {
   phase: string | null;
 }
 
+interface DebriefRequestBody {
+  sessionId?: string;
+  analysisDepth?: 'standard' | 'deep';
+}
+
 function buildDebriefPrompt(sessionSummary: string, handCount: number): string {
   return `You are a world-class poker coach with the strategic mind of Machiavelli — analytical, ruthless, and deeply psychological. A player just finished a session and wants a debrief. Analyze the patterns in their decision history. Be specific and direct — name the leaks, name the fixes. Use 4-6 tight bullets, then one closing directive sentence.
 
@@ -41,6 +46,10 @@ Debrief focus:
 - Close with one sharp directive for their next session`;
 }
 
+function getDebriefModel(analysisDepth: 'standard' | 'deep'): string {
+  return analysisDepth === 'deep' ? 'gpt-5' : 'gpt-5-mini';
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(204).end();
@@ -49,7 +58,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const openAiKey = process.env.OPENAI_API_KEY;
   if (!openAiKey) return res.status(500).json({ error: 'OPENAI_API_KEY not configured' });
 
-  const { sessionId } = req.body as { sessionId?: string };
+  const {
+    sessionId,
+    analysisDepth = 'standard',
+  } = req.body as DebriefRequestBody;
   if (!sessionId) return res.status(400).json({ error: 'sessionId required' });
 
   const sql = neon(process.env.DATABASE_URL!);
@@ -115,7 +127,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         Authorization: `Bearer ${openAiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4.1-mini',
+        model: getDebriefModel(analysisDepth),
         input: prompt,
         max_output_tokens: 600,
         temperature: 0.7,
