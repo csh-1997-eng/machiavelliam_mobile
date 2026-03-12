@@ -3,14 +3,15 @@
  * Licensed under MIT License - see LICENSE file for details
  *
  * Screen: scenario_screen.dart
- * Purpose: Hypothetical / study mode — free-form scenario input for
- *          pre-game prep, spot review, and range analysis without a live hand.
+ * Purpose: Palazzo-styled scenario coach — parchment textarea with ink
+ *          placeholder, book-icon example rows, walnut containers.
  */
 
 import 'package:flutter/material.dart';
 import '../services/insights_service.dart';
 import '../services/profile_service.dart';
 import '../services/api_client.dart';
+import '../theme/palazzo_colors.dart';
 
 class ScenarioScreen extends StatefulWidget {
   final String? initialScenario;
@@ -64,10 +65,7 @@ class _ScenarioScreenState extends State<ScenarioScreen> {
       return;
     }
 
-    setState(() {
-      _loading = true;
-      _response = null;
-    });
+    setState(() { _loading = true; _response = null; });
 
     final result = await InsightsService.getScenarioInsights(
       scenario: scenario,
@@ -85,19 +83,17 @@ class _ScenarioScreenState extends State<ScenarioScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Scenario Coach'),
-      ),
+      appBar: AppBar(title: const Text('Scenario Coach')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildInputCard(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             _buildExamplesCard(),
             if (_response != null) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               _buildResponseCard(),
             ],
           ],
@@ -106,107 +102,163 @@ class _ScenarioScreenState extends State<ScenarioScreen> {
     );
   }
 
+  // ── Parchment-tinted input card ──
+
   Widget _buildInputCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Describe the Spot', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text(
-              'Any situation — preflop, a specific board texture, a multi-street plan, a range question.',
-              style: const TextStyle(fontSize: 13, color: Color(0xFF7A7A8A)),
+    return Container(
+      decoration: BoxDecoration(
+        color: kWalnutLight.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: kBorder),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.auto_stories, color: kGold, size: 18),
+              SizedBox(width: 8),
+              Text('Describe the Spot', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kTextPrimary)),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Any situation \u2014 preflop, a specific board texture, a multi-street plan, a range question.',
+            style: TextStyle(fontSize: 12, color: kTextSecondary),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: kParchment.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: kBorder),
             ),
-            const SizedBox(height: 12),
-            TextField(
+            child: TextField(
               controller: _scenarioController,
               maxLines: 5,
               minLines: 3,
-              decoration: const InputDecoration(
+              style: const TextStyle(fontSize: 14, color: kTextPrimary, height: 1.5),
+              decoration: InputDecoration(
                 hintText: 'e.g. "I\'m on the button with AJo facing a 3-bet from a tight player in the CO..."',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.all(12),
+                hintStyle: TextStyle(fontSize: 13, color: kTextSecondary.withValues(alpha: 0.6), fontStyle: FontStyle.italic),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.all(12),
               ),
               textInputAction: TextInputAction.newline,
             ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _loading ? null : _submitScenario,
-                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
-                child: _loading
-                    ? const SizedBox(
-                        height: 16,
-                        width: 16,
-                        child: CircularProgressIndicator(color: Color(0xFF0D0F13), strokeWidth: 2),
-                      )
-                    : const Text('Ask the Coach', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [kWalnutLight, kWalnut],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: kGold.withValues(alpha: 0.4)),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: _loading ? null : _submitScenario,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: _loading
+                        ? const Center(
+                            child: SizedBox(
+                              height: 16, width: 16,
+                              child: CircularProgressIndicator(color: kGold, strokeWidth: 2),
+                            ),
+                          )
+                        : const Text(
+                            'Ask the Coach',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: kGold),
+                          ),
+                  ),
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+
+  // ── Example spots with book icons ──
 
   Widget _buildExamplesCard() {
-    return Card(
-      color: const Color(0xFF161921),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Example Spots', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF7A7A8A))),
-            const SizedBox(height: 10),
-            ..._exampleScenarios.map((ex) => GestureDetector(
-                  onTap: () => setState(() => _scenarioController.text = ex),
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.arrow_right, size: 18, color: Color(0xFFB8963E)),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            ex,
-                            style: const TextStyle(fontSize: 13, color: Color(0xFFDDDDDD)),
-                          ),
-                        ),
-                      ],
+    return Container(
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: kBorder),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.menu_book, color: kTextSecondary, size: 16),
+              SizedBox(width: 6),
+              Text('Example Spots', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: kTextSecondary)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ..._exampleScenarios.map((ex) => GestureDetector(
+            onTap: () => setState(() => _scenarioController.text = ex),
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.bookmark_outline, size: 16, color: kGold),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      ex,
+                      style: const TextStyle(fontSize: 13, color: kTextPrimary, height: 1.4),
                     ),
                   ),
-                )),
-            const SizedBox(height: 4),
-            const Text('Tap any example to use it.', style: TextStyle(fontSize: 11, color: Color(0xFF7A7A8A))),
-          ],
-        ),
+                ],
+              ),
+            ),
+          )),
+          const Text('Tap any example to use it.', style: TextStyle(fontSize: 11, color: kTextSecondary)),
+        ],
       ),
     );
   }
 
+  // ── Response card ──
+
   Widget _buildResponseCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.psychology, color: Color(0xFFB8963E), size: 20),
-                const SizedBox(width: 8),
-                const Text('Coach\'s Read', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(_response!, style: const TextStyle(fontSize: 14, height: 1.5)),
-          ],
-        ),
+    return Container(
+      decoration: BoxDecoration(
+        color: kWalnutLight.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: kGold.withValues(alpha: 0.3)),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.psychology, color: kGold, size: 20),
+              SizedBox(width: 8),
+              Text('Coach\'s Read', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kGold)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(_response!, style: const TextStyle(fontSize: 14, height: 1.6, color: kTextPrimary)),
+        ],
       ),
     );
   }

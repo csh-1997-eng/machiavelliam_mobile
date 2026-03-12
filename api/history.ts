@@ -32,21 +32,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const sql = neon(process.env.DATABASE_URL!);
 
   try {
-    // Fetch hands with pagination
-    const hands = await sql`
-      SELECT
-        h.id,
-        h.hole_cards,
-        h.community_cards,
-        h.final_hand,
-        h.hand_strength,
-        h.phase_reached,
-        h.created_at
-      FROM hands h
-      ${sessionFilter ? sql`WHERE h.session_id = ${sessionFilter}` : sql``}
-      ORDER BY h.created_at DESC
-      LIMIT ${PAGE_SIZE} OFFSET ${offset}
-    `;
+    // Split queries to avoid Neon tagged template interpolation issues with conditional WHERE
+    const hands = sessionFilter
+      ? await sql`
+          SELECT h.id, h.hole_cards, h.community_cards, h.final_hand, h.hand_strength, h.phase_reached, h.created_at
+          FROM hands h
+          WHERE h.session_id = ${sessionFilter}
+          ORDER BY h.created_at DESC
+          LIMIT ${PAGE_SIZE} OFFSET ${offset}
+        `
+      : await sql`
+          SELECT h.id, h.hole_cards, h.community_cards, h.final_hand, h.hand_strength, h.phase_reached, h.created_at
+          FROM hands h
+          ORDER BY h.created_at DESC
+          LIMIT ${PAGE_SIZE} OFFSET ${offset}
+        `;
 
     if (!hands.length) {
       return res.status(200).json({ hands: [], hasMore: false });
@@ -85,9 +85,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }));
 
     // Check if there are more pages
-    const [{ count }] = await sql`
-      SELECT COUNT(*)::int AS count FROM hands ${sessionFilter ? sql`WHERE session_id = ${sessionFilter}` : sql``}
-    `;
+    const [{ count }] = sessionFilter
+      ? await sql`SELECT COUNT(*)::int AS count FROM hands WHERE session_id = ${sessionFilter}`
+      : await sql`SELECT COUNT(*)::int AS count FROM hands`;
 
     return res.status(200).json({
       hands: result,
