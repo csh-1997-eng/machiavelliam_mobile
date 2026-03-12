@@ -27,10 +27,10 @@ Flutter app (iOS/Android/Web)
 flutter pub get
 
 # Run against deployed Vercel backend
-flutter run --dart-define=API_BASE_URL=https://your-project.vercel.app
+flutter run --dart-define=API_BASE_URL=https://machiavelliam.vercel.app
 
 # Run on specific device
-flutter run -d "iPhone 16 Pro" --dart-define=API_BASE_URL=https://your-project.vercel.app
+flutter run -d "iPhone 16 Pro" --dart-define=API_BASE_URL=https://machiavelliam.vercel.app
 ```
 
 ## Project Structure
