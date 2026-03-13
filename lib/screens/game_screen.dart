@@ -131,6 +131,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 _buildHeroCards(),
                 const SizedBox(height: 8),
                 _buildHandStrength(),
+                if (_gameController.showdownResult != null) ...[
+                  const SizedBox(height: 12),
+                  _buildShowdownResult(),
+                ],
                 const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -192,17 +196,17 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         final count = opponents.length;
 
         return SizedBox(
-          height: 90,
+          height: 130,
           child: Stack(
             clipBehavior: Clip.none,
             children: List.generate(count, (i) {
               final angle = math.pi * (i + 1) / (count + 1);
-              final x = totalWidth / 2 + (totalWidth * 0.42) * math.cos(angle) - 30;
-              final y = 50 - 45 * math.sin(angle);
+              final x = totalWidth / 2 + (totalWidth * 0.42) * math.cos(angle) - 38;
+              final y = 60 - 55 * math.sin(angle);
 
               return Positioned(
-                left: x.clamp(0, totalWidth - 60),
-                top: y.clamp(0, 60),
+                left: x.clamp(0, totalWidth - 76),
+                top: y.clamp(0, 80),
                 child: _buildOpponentSeat(opponents[i]),
               );
             }),
@@ -210,6 +214,25 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         );
       },
     );
+  }
+
+  Color _actionColor(String action) {
+    switch (action) {
+      case 'fold': return kDanger;
+      case 'call': return kFeltGreen;
+      case 'raise': return kGold;
+      case 'check': return kTextSecondary;
+      default: return kTextSecondary;
+    }
+  }
+
+  String _actionLabel(OpponentProfile opp) {
+    if (opp.lastAction == null) return '';
+    final action = opp.lastAction!.toUpperCase();
+    if (opp.lastActionAmount != null && opp.lastActionAmount! > 0) {
+      return '$action \$${opp.lastActionAmount!.toStringAsFixed(0)}';
+    }
+    return action;
   }
 
   Widget _buildOpponentSeat(OpponentProfile opp) {
@@ -237,29 +260,29 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               children: [
                 PlayingCardWidget(
                   faceUp: isShowdown && _showdownTriggered,
-                  scale: 0.5,
+                  scale: 0.6,
                   animateFlip: _showdownTriggered,
                 ),
-                const SizedBox(width: 2),
+                const SizedBox(width: 3),
                 PlayingCardWidget(
                   faceUp: isShowdown && _showdownTriggered,
-                  scale: 0.5,
+                  scale: 0.6,
                   animateFlip: _showdownTriggered,
                 ),
               ],
             ),
-            const SizedBox(height: 3),
+            const SizedBox(height: 4),
             Text(
               opp.seatLabel,
               style: const TextStyle(
-                fontSize: 8,
+                fontSize: 10,
                 color: kParchment,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.5,
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
               decoration: BoxDecoration(
                 color: kWalnut.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(4),
@@ -267,21 +290,32 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               child: Text(
                 opp.archetype.label,
                 style: TextStyle(
-                  fontSize: 7,
+                  fontSize: 9,
                   color: isActive ? kGold : kTextSecondary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ),
             if (opp.lastAction != null)
-              Text(
-                opp.lastAction!.toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 7,
-                  fontWeight: FontWeight.w700,
-                  color: kGold,
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  _actionLabel(opp),
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    color: _actionColor(opp.lastAction!),
+                  ),
                 ),
               ),
+            Text(
+              '\$${opp.stack.toStringAsFixed(0)}',
+              style: const TextStyle(
+                fontSize: 8,
+                color: kTextSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       ),
@@ -497,11 +531,48 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   // ══════════════════════════════════════════════════════
+  // SHOWDOWN RESULT
+  // ══════════════════════════════════════════════════════
+
+  Widget _buildShowdownResult() {
+    final result = _gameController.showdownResult!;
+    final isWin = result.contains('You win') || result.contains('folded!');
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isWin ? kFeltGreen.withValues(alpha: 0.2) : kBloodRed.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isWin ? kFeltGreen.withValues(alpha: 0.5) : kBloodRed.withValues(alpha: 0.5),
+          ),
+        ),
+        child: Text(
+          result,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: isWin ? kParchment : kDanger,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════
   // ACTION BAR — fixed bottom casino buttons
   // ══════════════════════════════════════════════════════
 
   Widget _buildActionBar() {
     final currentAction = _gameController.currentPhaseAction;
+    final legal = _gameController.getLegalActions();
+    final turnContext = _gameController.getTurnContext();
+    final phaseName = _gameController.currentPhase.name[0].toUpperCase() +
+        _gameController.currentPhase.name.substring(1);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 20),
@@ -517,6 +588,40 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Turn indicator banner
+            if (currentAction == null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: kGold.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: kGold.withValues(alpha: 0.4)),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'YOUR ACTION',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: kGold,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                    if (turnContext.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          turnContext,
+                          style: const TextStyle(fontSize: 10, color: kTextSecondary),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
             if (currentAction != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -526,15 +631,37 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: kGold),
                 ),
               ),
+            // Phase context
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                '$phaseName · Pot \$${_gameController.pot.toStringAsFixed(0)} · Stack \$${_gameController.heroStack.toStringAsFixed(0)}',
+                style: const TextStyle(fontSize: 9, color: kTextSecondary, letterSpacing: 0.5),
+              ),
+            ),
+            // Legal action buttons
             Row(
               children: [
-                _actionButton('FOLD', ActionType.fold, currentAction, kBloodRed),
-                const SizedBox(width: 8),
-                _actionButton('CHECK', ActionType.check, currentAction, null),
-                const SizedBox(width: 8),
-                _actionButton('CALL', ActionType.call, currentAction, null),
-                const SizedBox(width: 8),
-                _actionButton('BET', ActionType.bet, currentAction, kFeltGreen, isBet: true),
+                if (legal.canFold)
+                  Expanded(child: _actionButton('FOLD', ActionType.fold, currentAction, kBloodRed)),
+                if (legal.canFold) const SizedBox(width: 8),
+                if (legal.canCheck)
+                  Expanded(child: _actionButton('CHECK', ActionType.check, currentAction, null)),
+                if (legal.canCheck) const SizedBox(width: 8),
+                if (legal.canCall)
+                  Expanded(
+                    child: _actionButton(
+                      'CALL \$${legal.callAmount.toStringAsFixed(0)}',
+                      ActionType.call,
+                      currentAction,
+                      null,
+                    ),
+                  ),
+                if (legal.canCall) const SizedBox(width: 8),
+                if (legal.canBet)
+                  Expanded(child: _actionButton('BET', ActionType.bet, currentAction, kFeltGreen, isBet: true)),
+                if (legal.canRaise)
+                  Expanded(child: _actionButton('RAISE', ActionType.raise, currentAction, kFeltGreen, isBet: true)),
               ],
             ),
           ],
@@ -552,31 +679,29 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }) {
     final isSelected = currentAction?.action == action;
 
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => isBet ? _showBetDialog() : _recordAction(action),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? kGold
-                : accentColor?.withValues(alpha: 0.3) ?? kSurface.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isSelected ? kGold : kWalnutLight,
-              width: isSelected ? 1.5 : 0.5,
-            ),
+    return GestureDetector(
+      onTap: () => isBet ? _showBetDialog(isRaise: action == ActionType.raise) : _recordAction(action),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? kGold
+              : accentColor?.withValues(alpha: 0.3) ?? kSurface.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? kGold : kWalnutLight,
+            width: isSelected ? 1.5 : 0.5,
           ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: isSelected ? kWalnut : kTextPrimary,
-                letterSpacing: 1,
-              ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: isSelected ? kWalnut : kTextPrimary,
+              letterSpacing: 1,
             ),
           ),
         ),
@@ -890,27 +1015,43 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     });
   }
 
-  void _showBetDialog() {
-    final controller = TextEditingController();
+  void _showBetDialog({bool isRaise = false}) {
+    final legal = _gameController.getLegalActions();
+    final controller = TextEditingController(text: legal.minBet.toStringAsFixed(0));
+    final actionType = isRaise ? ActionType.raise : ActionType.bet;
+    final title = isRaise ? 'Raise Amount' : 'Bet Amount';
+    final buttonLabel = isRaise ? 'Raise' : 'Bet';
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: kSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Bet Amount', style: TextStyle(color: kTextPrimary)),
-        content: TextField(
-          controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          style: const TextStyle(color: kTextPrimary),
-          decoration: InputDecoration(
-            prefixText: '\$',
-            prefixStyle: const TextStyle(color: kGold),
-            hintText: '0',
-            hintStyle: TextStyle(color: kTextSecondary.withValues(alpha: 0.5)),
-            enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: kBorder)),
-            focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: kGold)),
-          ),
-          autofocus: true,
+        title: Text(title, style: const TextStyle(color: kTextPrimary)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Min: \$${legal.minBet.toStringAsFixed(0)}  ·  Max: \$${legal.maxBet.toStringAsFixed(0)} (all-in)',
+              style: const TextStyle(fontSize: 11, color: kTextSecondary),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              style: const TextStyle(color: kTextPrimary),
+              decoration: InputDecoration(
+                prefixText: '\$',
+                prefixStyle: const TextStyle(color: kGold),
+                hintText: legal.minBet.toStringAsFixed(0),
+                hintStyle: TextStyle(color: kTextSecondary.withValues(alpha: 0.5)),
+                enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: kBorder)),
+                focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: kGold)),
+              ),
+              autofocus: true,
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -919,11 +1060,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           ),
           TextButton(
             onPressed: () {
-              final amount = double.tryParse(controller.text) ?? 0;
-              _recordAction(ActionType.bet, amount: amount);
+              final amount = double.tryParse(controller.text) ?? legal.minBet;
+              _recordAction(actionType, amount: amount);
               Navigator.pop(ctx);
             },
-            child: const Text('Bet', style: TextStyle(color: kGold, fontWeight: FontWeight.w700)),
+            child: Text(buttonLabel, style: const TextStyle(color: kGold, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
