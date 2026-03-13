@@ -126,20 +126,23 @@ class OpponentAI {
       );
 
       opp.lastAction = result.action;
+      opp.lastActionAmount = null;
 
       switch (result.action) {
         case 'fold':
           opp.isActive = false;
           break;
         case 'call':
-          final callAmt = (result.amount ?? currentBet).clamp(0, opp.stack);
+          final callAmt = (result.amount ?? currentBet).clamp(0.0, opp.stack);
           opp.stack -= callAmt;
           updatedPot += callAmt;
+          opp.lastActionAmount = callAmt;
           break;
         case 'raise':
-          final raiseAmt = (result.amount ?? currentBet * 2).clamp(0, opp.stack);
+          final raiseAmt = (result.amount ?? currentBet * 2).clamp(0.0, opp.stack);
           opp.stack -= raiseAmt;
           updatedPot += raiseAmt;
+          opp.lastActionAmount = raiseAmt;
           break;
         case 'check':
           break;

@@ -37,6 +37,7 @@ class OpponentProfile {
   PlayerArchetype archetype;
   double stack;
   String? lastAction;
+  double? lastActionAmount;
   bool isActive;
 
   OpponentProfile({
@@ -44,6 +45,7 @@ class OpponentProfile {
     this.archetype = PlayerArchetype.tag,
     required this.stack,
     this.lastAction,
+    this.lastActionAmount,
     this.isActive = true,
   });
 
@@ -52,6 +54,7 @@ class OpponentProfile {
         'archetype': archetype.apiKey,
         'stack': stack,
         if (lastAction != null) 'lastAction': lastAction,
+        if (lastActionAmount != null) 'lastActionAmount': lastActionAmount,
         'isActive': isActive,
       };
 }
