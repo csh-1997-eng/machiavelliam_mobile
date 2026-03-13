@@ -40,71 +40,76 @@ class FeltTable extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         child: Stack(
           children: [
-            // Walnut outer wood
-            Positioned.fill(
-              child: Container(color: kWalnut),
+            // Content drives the Stack size (non-positioned)
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: child,
             ),
-            // Crimson leather rail
+            // Decorative layers fill behind content
             Positioned.fill(
-              child: Container(
-                margin: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: kCrimson,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: kCrimsonLight.withValues(alpha: 0.4),
-                    width: 0.5,
+              child: IgnorePointer(child: Container(color: kWalnut)),
+            ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  margin: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: kCrimson,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: kCrimsonLight.withValues(alpha: 0.4),
+                      width: 0.5,
+                    ),
                   ),
                 ),
               ),
             ),
-            // Gold stud trim (painted dots along rail)
             Positioned.fill(
-              child: Container(
-                margin: const EdgeInsets.all(8),
-                child: CustomPaint(
-                  painter: _StudTrimPainter(),
+              child: IgnorePointer(
+                child: Container(
+                  margin: const EdgeInsets.all(8),
+                  child: CustomPaint(painter: _StudTrimPainter()),
                 ),
               ),
             ),
-            // Baize felt center
             Positioned.fill(
-              child: Container(
-                margin: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  gradient: const RadialGradient(
-                    center: Alignment(0, -0.2),
-                    radius: 1.2,
-                    colors: [kBaizeLight, kBaize, kBaizeEdge],
-                    stops: [0.0, 0.6, 1.0],
+              child: IgnorePointer(
+                child: Container(
+                  margin: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: const RadialGradient(
+                      center: Alignment(0, -0.2),
+                      radius: 1.2,
+                      colors: [kBaizeLight, kBaize, kBaizeEdge],
+                      stops: [0.0, 0.6, 1.0],
+                    ),
                   ),
                 ),
               ),
             ),
-            // Felt texture overlay (subtle noise effect)
             Positioned.fill(
-              child: Container(
-                margin: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  gradient: RadialGradient(
-                    center: const Alignment(0, -0.3),
-                    radius: 0.8,
-                    colors: [
-                      Colors.white.withValues(alpha: 0.03),
-                      Colors.transparent,
-                    ],
+              child: IgnorePointer(
+                child: Container(
+                  margin: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: RadialGradient(
+                      center: const Alignment(0, -0.3),
+                      radius: 0.8,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.03),
+                        Colors.transparent,
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-            // Content
-            Positioned.fill(
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: child,
-              ),
+            // Content on top (interactive, re-painted over decorative layers)
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: child,
             ),
           ],
         ),
